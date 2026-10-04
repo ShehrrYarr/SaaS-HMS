@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DemoController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\PdfController;
@@ -21,6 +22,9 @@ if (config('hms.template_demo')) {
     Route::redirect('template', 'template/index');
     Route::get('template/{page}', TemplateController::class)->where('page', '[A-Za-z0-9\-]+')->name('template');
 }
+
+// One-click demo sign-in (landing page "Try Demo Hospital" buttons).
+Route::post('demo/{role}', [DemoController::class, 'login'])->middleware('throttle:30,1')->name('demo.login');
 
 Route::get('verify/lab/{code}', [VerificationController::class, 'lab'])->name('verify.lab');
 Route::get('files/{path}', FileController::class)->where('path', '.*')->middleware('auth')->name('files.show');

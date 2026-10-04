@@ -35,13 +35,26 @@ class DemoHospitalSeeder extends Seeder
 {
     public function run(Plan $plan, Plan $basic): void
     {
-        $provisioner = app(HospitalProvisioner::class);
-
         if (Hospital::where('slug', 'city-hospital')->exists()) {
             $this->command?->warn('Demo hospital already exists – skipping.');
 
             return;
         }
+
+        $this->createCityHospital($plan);
+
+        app(HospitalProvisioner::class)->create([
+            'name' => 'Sunrise Clinic', 'slug' => 'sunrise-clinic', 'code' => 'SRC',
+            'email' => 'hello@sunrise.test', 'city' => 'Riverside', 'country' => 'United States', 'currency' => 'USD',
+        ], ['name' => 'Sunrise Admin', 'email' => 'admin@sunrise.test', 'password' => 'password'], $basic, 'monthly', true);
+    }
+
+    /**
+     * The public demo hospital (also used by `php artisan hms:reset-demo`).
+     */
+    public function createCityHospital(Plan $plan): Hospital
+    {
+        $provisioner = app(HospitalProvisioner::class);
 
         $hospital = $provisioner->create([
             'name' => 'City General Hospital', 'slug' => 'city-hospital', 'code' => 'CGH',
@@ -57,10 +70,7 @@ class DemoHospitalSeeder extends Seeder
             (new DemoActivitySeeder)->seed($hospital);
         });
 
-        $provisioner->create([
-            'name' => 'Sunrise Clinic', 'slug' => 'sunrise-clinic', 'code' => 'SRC',
-            'email' => 'hello@sunrise.test', 'city' => 'Riverside', 'country' => 'United States', 'currency' => 'USD',
-        ], ['name' => 'Sunrise Admin', 'email' => 'admin@sunrise.test', 'password' => 'password'], $basic, 'monthly', true);
+        return $hospital;
     }
 
     protected function seedHospital(Hospital $hospital): void

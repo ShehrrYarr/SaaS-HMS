@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use App\Models\AuditLog;
 use App\Services\HospitalProvisioner;
@@ -12,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Component
 {
-    use Toasts;
+    use GuardsDemo, Toasts;
 
     #[Url]
     public ?int $roleId = null;
@@ -62,6 +63,9 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
     {
         $this->authorize('roles.manage');
         $role = $this->role();
+        if (array_key_exists($role->name, config('hms.default_roles')) && $this->demoLocked('Editing the default roles')) {
+            return;
+        }
         if ($role->name === 'Hospital Admin') {
             $this->toast('Hospital Admin always has every permission in your plan.', 'info');
 
@@ -99,6 +103,9 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
     {
         $this->authorize('roles.manage');
         $role = $this->role();
+        if (array_key_exists($role->name, config('hms.default_roles')) && $this->demoLocked('Deleting the default roles')) {
+            return;
+        }
         abort_if(in_array($role->name, config('hms.protected_roles')), 422);
         if ($role->users()->count() > 0) {
             $this->toast('Reassign users before deleting this role.', 'error');

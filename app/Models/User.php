@@ -39,6 +39,32 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Public demo accounts are shared by every visitor: their credentials & status are immutable.
+        static::updating(function (User $user) {
+            if (! $user->isDemoAccount()) {
+                return;
+            }
+            foreach (['email', 'password', 'status', 'hospital_id', 'is_super_admin'] as $field) {
+                if ($user->isDirty($field)) {
+                    $user->setRawAttributes(array_merge($user->getAttributes(), [$field => $user->getRawOriginal($field)]));
+                }
+            }
+        });
+    }
+
+    public function isDemoAccount(): bool
+    {
+        if (! config('hms.demo.enabled') || ! $this->hospital_id) {
+            return false;
+        }
+        $email = $this->exists ? $this->getRawOriginal('email') : $this->email;
+
+        return collect(config('hms.demo.accounts'))->pluck('email')->contains($email)
+            && Hospital::whereKey($this->getRawOriginal('hospital_id') ?? $this->hospital_id)->value('slug') === config('hms.demo.hospital');
+    }
+
     public function hospital(): BelongsTo
     {
         return $this->belongsTo(Hospital::class);

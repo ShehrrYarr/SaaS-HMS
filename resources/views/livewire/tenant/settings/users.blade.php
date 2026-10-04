@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\WithTable;
 use App\Models\AuditLog;
 use App\Models\User;
@@ -12,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 new #[Layout('layouts.app')] #[Title('Users')] class extends Component
 {
-    use WithTable;
+    use GuardsDemo, WithTable;
 
     protected string $defaultSort = 'name';
 
@@ -64,6 +65,9 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
         ]);
 
         $user = $this->editingId ? User::forCurrentHospital()->findOrFail($this->editingId) : new User;
+        if ($user->exists && $user->isDemoAccount() && $this->demoLocked('Editing the shared demo accounts')) {
+            return;
+        }
         if ($user->id === auth()->id() && (! in_array('Hospital Admin', $this->form['roles']) && $user->hasRole('Hospital Admin') || $this->form['status'] !== 'active')) {
             $this->addError('form.roles', 'You cannot remove your own admin access or deactivate yourself.');
 

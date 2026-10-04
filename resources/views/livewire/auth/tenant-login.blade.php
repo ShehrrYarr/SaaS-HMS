@@ -54,6 +54,7 @@ new #[Layout('layouts.guest')] #[Title('Staff Sign In')] class extends Component
     @endif
 
     @include('livewire.auth.partials.password-form')
+    @include('livewire.auth.partials.demo-buttons')
 
     <p class="mb-0 mt-5 text-muted text-center">
         Are you a patient? <a href="{{ route('portal.login') }}" class="text-primary fw-semibold">Open the Patient Portal</a>

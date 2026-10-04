@@ -40,6 +40,7 @@
     <main class="app-wrapper">
         <div class="app-container">
             @include('layouts.partials.impersonation-banner')
+            @include('layouts.partials.demo-banner')
             {{ $slot }}
         </div>
     </main>

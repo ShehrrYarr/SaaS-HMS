@@ -135,3 +135,13 @@ if (! function_exists('doctor_exists')) {
         return tenant_exists('staff')->where('staff_type', 'doctor')->whereNull('deleted_at');
     }
 }
+
+if (! function_exists('is_demo_hospital')) {
+    /** True when the current (or given) hospital is the public demo hospital. */
+    function is_demo_hospital(?\App\Models\Hospital $hospital = null): bool
+    {
+        $hospital ??= hospital();
+
+        return (bool) config('hms.demo.enabled') && $hospital && $hospital->slug === config('hms.demo.hospital');
+    }
+}

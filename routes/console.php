@@ -7,6 +7,7 @@ use App\Models\MedicineBatch;
 use App\Models\User;
 use App\Notifications\HmsNotification;
 use App\Services\BloodBankService;
+use App\Services\DemoService;
 use App\Services\SubscriptionService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -67,6 +68,20 @@ Artisan::command('hms:daily-maintenance', function () {
     });
 })->purpose('Per-hospital housekeeping: no-shows, blood expiry, pharmacy alerts, storage usage');
 
+Artisan::command('hms:reset-demo {--force : Run even when the public demo is disabled}', function (DemoService $demo) {
+    if (! config('hms.demo.enabled') && ! $this->option('force')) {
+        $this->warn('Public demo is disabled (HMS_DEMO_ENABLED=false).');
+
+        return;
+    }
+    $hospital = $demo->reset();
+    $this->info("Demo hospital {$hospital->name} (/h/{$hospital->slug}) wiped and re-seeded.");
+})->purpose('Wipe and re-seed the public demo hospital');
+
+Schedule::command('hms:reset-demo')
+    ->cron('0 */'.max(1, (int) config('hms.demo.reset_every_hours', 6)).' * * *')
+    ->when(fn () => (bool) config('hms.demo.enabled'))
+    ->withoutOverlapping();
 Schedule::command('hms:billing-run')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('hms:daily-maintenance')->dailyAt('01:30')->withoutOverlapping();
 Schedule::command('queue:prune-failed --hours=168')->weekly();

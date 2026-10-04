@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -7,7 +8,7 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.portal')] #[Title('My Profile')] class extends Component
 {
-    use Toasts;
+    use GuardsDemo, Toasts;
 
     public array $form = [];
 
@@ -40,6 +41,9 @@ new #[Layout('layouts.portal')] #[Title('My Profile')] class extends Component
 
     public function updatePassword(): void
     {
+        if (auth()->user()->isDemoAccount() && $this->demoLocked('Changing the demo password')) {
+            return;
+        }
         $this->validate(['current_password' => 'required|current_password', 'password' => 'required|min:8|confirmed']);
         auth()->user()->update(['password' => $this->password]);
         $this->reset('current_password', 'password', 'password_confirmation');

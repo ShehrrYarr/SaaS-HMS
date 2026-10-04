@@ -33,6 +33,27 @@ return [
 
     'pharmacy_expiry_alert_days' => 90,
 
+    /*
+    | Public demo: one-click sign-in to the demo hospital from the landing page.
+    | Demo accounts cannot change their email/password/status/roles, and the
+    | hospital is wiped & re-seeded on a schedule (php artisan hms:reset-demo).
+    */
+    'demo' => [
+        'enabled' => env('HMS_DEMO_ENABLED', true),
+        'hospital' => env('HMS_DEMO_HOSPITAL', 'city-hospital'),
+        'reset_every_hours' => (int) env('HMS_DEMO_RESET_HOURS', 6),
+        'accounts' => [
+            'admin' => ['email' => 'admin@cityhospital.test', 'label' => 'Hospital Admin', 'icon' => 'ri-shield-user-line', 'color' => 'primary', 'blurb' => 'Every module, settings, roles & reports'],
+            'doctor' => ['email' => 'doctor@cityhospital.test', 'label' => 'Doctor', 'icon' => 'ri-stethoscope-line', 'color' => 'success', 'blurb' => 'Workspace, consultations, e-prescriptions'],
+            'reception' => ['email' => 'reception@cityhospital.test', 'label' => 'Receptionist', 'icon' => 'ri-customer-service-2-line', 'color' => 'info', 'blurb' => 'Registration, appointments, tokens, billing'],
+            'nurse' => ['email' => 'nurse@cityhospital.test', 'label' => 'Nurse', 'icon' => 'ri-heart-pulse-line', 'color' => 'danger', 'blurb' => 'Nurse station, vitals, bed matrix'],
+            'pharmacist' => ['email' => 'pharmacist@cityhospital.test', 'label' => 'Pharmacist', 'icon' => 'ri-capsule-line', 'color' => 'warning', 'blurb' => 'POS, dispensing, stock & purchasing'],
+            'lab' => ['email' => 'lab@cityhospital.test', 'label' => 'Lab Technician', 'icon' => 'ri-flask-line', 'color' => 'secondary', 'blurb' => 'Samples, barcodes, results & QC'],
+            'accounts' => ['email' => 'accounts@cityhospital.test', 'label' => 'Accountant', 'icon' => 'ri-money-dollar-circle-line', 'color' => 'success', 'blurb' => 'Invoices, claims, expenses, tax reports'],
+            'patient' => ['email' => 'patient@cityhospital.test', 'label' => 'Patient Portal', 'icon' => 'ri-user-heart-line', 'color' => 'primary', 'blurb' => 'Appointments, reports, bills, video consult'],
+        ],
+    ],
+
     'modules' => [
         'core' => [
             'label' => 'Administration',

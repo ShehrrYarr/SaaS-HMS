@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -9,7 +10,7 @@ use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] #[Title('My Profile')] class extends Component
 {
-    use Toasts, WithFileUploads;
+    use GuardsDemo, Toasts, WithFileUploads;
 
     public string $name = '';
 
@@ -37,6 +38,9 @@ new #[Layout('layouts.app')] #[Title('My Profile')] class extends Component
 
     public function save(): void
     {
+        if (auth()->user()->isDemoAccount() && $this->demoLocked('Editing the demo account')) {
+            return;
+        }
         $user = auth()->user();
         $data = $this->validate([
             'name' => 'required|string|max:120',
@@ -63,6 +67,9 @@ new #[Layout('layouts.app')] #[Title('My Profile')] class extends Component
 
     public function updatePassword(): void
     {
+        if (auth()->user()->isDemoAccount() && $this->demoLocked('Changing the demo password')) {
+            return;
+        }
         $this->validate([
             'current_password' => 'required|current_password',
             'password' => 'required|string|min:8|confirmed',

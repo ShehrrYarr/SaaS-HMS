@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -10,7 +11,7 @@ use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Component
 {
-    use Toasts, WithFileUploads;
+    use GuardsDemo, Toasts, WithFileUploads;
 
     public array $form = [];
 
@@ -38,6 +39,9 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
     public function save(): void
     {
         $this->authorize('settings.manage');
+        if ($this->demoLocked('Editing the hospital profile')) {
+            return;
+        }
         $data = $this->validate([
             'form.name' => 'required|string|max:150',
             'form.email' => 'nullable|email',
@@ -76,6 +80,9 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
     public function uploadCertificate(): void
     {
         $this->authorize('settings.manage');
+        if ($this->demoLocked('Installing certificates')) {
+            return;
+        }
         $this->validate(['certificate' => 'required|file|max:100', 'certPassword' => 'required|string|max:200']);
         $content = file_get_contents($this->certificate->getRealPath());
         $certs = [];

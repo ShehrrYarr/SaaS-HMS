@@ -13,7 +13,7 @@ access for its staff and a **patient portal**.
 1. [Features](#features)
 2. [Architecture](#architecture)
 3. [Local setup (WAMP, `http://localhost/hms`)](#local-setup)
-4. [Demo logins](#demo-logins)
+4. [Demo logins & public demo](#demo-logins)
 5. [Deploying to the VPS (`http://23.230.253.206/hms`)](#deploying-to-the-vps)
 6. [Scheduled jobs & workers](#scheduled-jobs--workers)
 7. [Integrations](#integrations)
@@ -118,6 +118,26 @@ isolation testing. The e-mail addresses and the shared demo password are listed 
 `database/seeders/DatabaseSeeder.php`. **Change or remove all demo accounts before going live**
 (production: `php artisan migrate --seed` is not needed — create the Super Admin with the seeder’s platform part or tinker).
 
+### Public demo hospital
+
+The landing page (`/`) describes the product and has **Try Demo Hospital as Admin** plus one button per role
+(Doctor, Receptionist, Nurse, Pharmacist, Lab, Accounts, Patient). These sign visitors straight into City General
+Hospital without a password (`POST /demo/{role}`, throttled); the staff and portal login pages show the same buttons.
+Inside the demo a banner shows the current role, a role switcher and the next reset time.
+
+So visitors cannot lock each other out, demo accounts keep their e-mail, password and status, and the hospital
+profile, certificates, roles, user accounts and subscription are read-only. All clinical and billing work is open.
+`php artisan hms:reset-demo` deletes the demo hospital with all its data and files and rebuilds it with fresh sample
+data. The scheduler runs it every `HMS_DEMO_RESET_HOURS`, and other hospitals are not touched.
+
+| `.env` | Default | Meaning |
+|---|---|---|
+| `HMS_DEMO_ENABLED` | `true` | landing demo buttons, `/demo/{role}` and the reset schedule; set `false` for a private installation |
+| `HMS_DEMO_HOSPITAL` | `city-hospital` | slug of the hospital that is public and gets reset |
+| `HMS_DEMO_RESET_HOURS` | `6` | reset interval |
+
+`fakerphp/faker` is a production dependency because the reset generates sample data.
+
 ## Deploying to the VPS
 
 Target: `http://23.230.253.206/hms` on Ubuntu + Nginx/Apache + PHP-FPM 8.2+.
@@ -167,6 +187,7 @@ The app handles the sub-path itself: Livewire’s script/update endpoints are pr
 |---|---|---|
 | `hms:billing-run` | 01:00 | renewal invoices (7 days before expiry), suspend hospitals unpaid past the grace period |
 | `hms:daily-maintenance` | 01:30 | no-show marking, blood unit expiry, pharmacy expiry/low-stock notifications, storage usage per hospital |
+| `hms:reset-demo` | every `HMS_DEMO_RESET_HOURS` (when the demo is enabled) | wipe and re-seed the public demo hospital |
 
 Optional queue worker (Supervisor): `php artisan queue:work --tries=3` (notifications are database-backed and synchronous by default).
 

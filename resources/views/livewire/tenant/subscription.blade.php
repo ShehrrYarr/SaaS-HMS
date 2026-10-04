@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use App\Models\Plan;
 use App\Models\SubscriptionInvoice;
@@ -11,7 +12,7 @@ use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] #[Title('Subscription')] class extends Component
 {
-    use Toasts, WithFileUploads;
+    use GuardsDemo, Toasts, WithFileUploads;
 
     public ?int $payingId = null;
 
@@ -34,6 +35,9 @@ new #[Layout('layouts.app')] #[Title('Subscription')] class extends Component
     public function submitProof(): void
     {
         $this->authorize('subscription.manage');
+        if ($this->demoLocked('Paying invoices')) {
+            return;
+        }
         $this->validate([
             'payingId' => 'required',
             'proof' => 'required|file|max:5120|mimes:pdf,jpg,jpeg,png',
@@ -54,6 +58,9 @@ new #[Layout('layouts.app')] #[Title('Subscription')] class extends Component
     public function requestPlan(SubscriptionService $billing): void
     {
         $this->authorize('subscription.manage');
+        if ($this->demoLocked('Changing the plan')) {
+            return;
+        }
         $this->validate(['planId' => 'required|exists:plans,id', 'cycle' => 'required|in:monthly,yearly']);
         $open = SubscriptionInvoice::whereIn('status', ['unpaid', 'pending_verification'])->first();
         if ($open) {

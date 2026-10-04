@@ -1,0 +1,48 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Environment & secrets (never commit real credentials)
+.env
+.env.backup
+.env.production
+.env.testing
+/auth.json
+*.p12
+*.pfx
+*.pem
+*.key
+
+# Build output
+/public/build
+/public/hot
+/public/storage
+/public/mix-manifest.json.bak
+
+# Laravel runtime (uploads in storage/app/private contain patient data — never commit)
+/storage/*.key
+/storage/pail
+*.log
+
+# Testing
+/.phpunit.cache
+.phpunit.result.cache
+/coverage
+
+# Tooling / editors
+.phpactor.json
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/.claude
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,30 @@
+/* HMS additions on top of Herozi. Source: resources/assets/scss/hms.scss */
+[x-cloak]{display:none!important}
+.hms-logo{max-width:180px;object-fit:contain}
+.hms-modal{display:block;background:rgba(15,23,42,.45);overflow-y:auto}
+.table-hms th{white-space:nowrap;font-weight:600;font-size:.8125rem}
+.table-hms td{vertical-align:middle}
+.sortable{cursor:pointer;user-select:none}
+.sortable:hover{color:var(--bs-primary)}
+.hms-search-select{position:relative}
+.hms-search-select .hms-search-select-menu{position:absolute;z-index:1060;inset-inline:0;top:100%;max-height:260px;overflow-y:auto;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:var(--bs-border-radius);box-shadow:var(--bs-box-shadow)}
+.hms-search-select .hms-search-select-option{padding:.45rem .75rem;cursor:pointer}
+.hms-search-select .hms-search-select-option.active,.hms-search-select .hms-search-select-option:hover{background:var(--bs-primary-bg-subtle);color:var(--bs-primary)}
+.hms-global-search{width:320px;position:relative}
+.hms-global-search .dropdown-menu{width:100%;max-height:420px;overflow-y:auto}
+.bed-tile{border:1px solid var(--bs-border-color);border-radius:.5rem;padding:.75rem;min-height:92px;transition:transform .12s ease}
+.bed-tile:hover{transform:translateY(-2px)}
+.bed-tile.bed-available{border-color:var(--bs-success);background:var(--bs-success-bg-subtle)}
+.bed-tile.bed-occupied{border-color:var(--bs-danger);background:var(--bs-danger-bg-subtle)}
+.bed-tile.bed-reserved{border-color:var(--bs-info);background:var(--bs-info-bg-subtle)}
+.bed-tile.bed-cleaning{border-color:var(--bs-warning);background:var(--bs-warning-bg-subtle)}
+.bed-tile.bed-maintenance{border-color:var(--bs-secondary);background:var(--bs-secondary-bg-subtle)}
+.token-display{font-size:4rem;font-weight:700;line-height:1}
+.queue-board{min-height:100vh;background:var(--bs-body-bg)}
+.pos-cart{max-height:calc(100vh - 360px);overflow-y:auto}
+.pos-product{cursor:pointer}
+.pos-product:hover{border-color:var(--bs-primary)!important}
+.result-flag-high,.result-flag-critical_high{color:var(--bs-danger);font-weight:600}
+.result-flag-low,.result-flag-critical_low{color:var(--bs-primary);font-weight:600}
+.min-w-0{min-width:0}
+@media print{.app-header,.app-sidebar,.footer,.no-print,.progress-wrap{display:none!important}.app-wrapper{margin:0!important;padding:0!important}}

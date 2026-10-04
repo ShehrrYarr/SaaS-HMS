@@ -1,0 +1,49 @@
+<?php
+
+use App\Http\Middleware\EnsureModuleEnabled;
+use App\Http\Middleware\EnsurePatient;
+use App\Http\Middleware\EnsureStaff;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\IdentifyHospital;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->alias([
+            'tenant' => IdentifyHospital::class,
+            'staff' => EnsureStaff::class,
+            'patient' => EnsurePatient::class,
+            'super_admin' => EnsureSuperAdmin::class,
+            'module' => EnsureModuleEnabled::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        ]);
+
+        // The tenant must be identified before auth so redirects & permission checks are tenant-aware.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            prepend: IdentifyHospital::class,
+        );
+
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if (tenancy()->check()) {
+                return $request->is('h/*/portal*') ? route('portal.login') : route('tenant.login');
+            }
+
+            return $request->is('admin*') ? route('admin.login') : route('home');
+        });
+
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->homeUrl() ?? route('home'));
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        //
+    })->create();

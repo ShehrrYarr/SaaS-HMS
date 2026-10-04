@@ -1,0 +1,136 @@
+// HMS additions on top of the Herozi theme. Compiled to public/assets/css/hms.css
+// (also shipped pre-compiled, plain CSS-compatible, so no build step is required).
+
+[x-cloak] {
+    display: none !important;
+}
+
+.hms-logo {
+    max-width: 180px;
+    object-fit: contain;
+}
+
+// Livewire-driven modal (see <x-modal>)
+.hms-modal {
+    display: block;
+    background: rgba(15, 23, 42, 0.45);
+    overflow-y: auto;
+}
+
+.table-hms {
+    th {
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: 0.8125rem;
+    }
+
+    td {
+        vertical-align: middle;
+    }
+}
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+        color: var(--bs-primary);
+    }
+}
+
+// Searchable select (<x-search-select>)
+.hms-search-select {
+    position: relative;
+
+    .hms-search-select-menu {
+        position: absolute;
+        z-index: 1060;
+        inset-inline: 0;
+        top: 100%;
+        max-height: 260px;
+        overflow-y: auto;
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+        box-shadow: var(--bs-box-shadow);
+    }
+
+    .hms-search-select-option {
+        padding: 0.45rem 0.75rem;
+        cursor: pointer;
+
+        &.active,
+        &:hover {
+            background: var(--bs-primary-bg-subtle);
+            color: var(--bs-primary);
+        }
+    }
+}
+
+.hms-global-search {
+    width: 320px;
+    position: relative;
+
+    .dropdown-menu {
+        width: 100%;
+        max-height: 420px;
+        overflow-y: auto;
+    }
+}
+
+// Bed matrix tiles
+.bed-tile {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    min-height: 92px;
+    transition: transform 0.12s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    &.bed-available { border-color: var(--bs-success); background: var(--bs-success-bg-subtle); }
+    &.bed-occupied { border-color: var(--bs-danger); background: var(--bs-danger-bg-subtle); }
+    &.bed-reserved { border-color: var(--bs-info); background: var(--bs-info-bg-subtle); }
+    &.bed-cleaning { border-color: var(--bs-warning); background: var(--bs-warning-bg-subtle); }
+    &.bed-maintenance { border-color: var(--bs-secondary); background: var(--bs-secondary-bg-subtle); }
+}
+
+// Token / queue display
+.token-display {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.queue-board {
+    min-height: 100vh;
+    background: var(--bs-body-bg);
+}
+
+// POS
+.pos-cart {
+    max-height: calc(100vh - 360px);
+    overflow-y: auto;
+}
+
+.pos-product {
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--bs-primary) !important;
+    }
+}
+
+.result-flag-high,
+.result-flag-critical_high { color: var(--bs-danger); font-weight: 600; }
+.result-flag-low,
+.result-flag-critical_low { color: var(--bs-primary); font-weight: 600; }
+
+.min-w-0 { min-width: 0; }
+
+@media print {
+    .app-header, .app-sidebar, .footer, .no-print, .progress-wrap { display: none !important; }
+    .app-wrapper { margin: 0 !important; padding: 0 !important; }
+}

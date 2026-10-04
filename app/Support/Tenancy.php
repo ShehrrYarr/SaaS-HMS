@@ -51,6 +51,14 @@ class Tenancy
         $this->set(null);
     }
 
+    /** Clear all tenant state (start of every request / job, long-running workers). */
+    public function reset(): void
+    {
+        $this->requestBypass = false;
+        $this->bypassDepth = 0;
+        $this->forget();
+    }
+
     /** Super Admin area: platform users see across tenants for the whole request. */
     public function bypassForRequest(): void
     {

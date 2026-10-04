@@ -34,12 +34,17 @@ return Application::configure(basePath: dirname(__DIR__))
             prepend: IdentifyHospital::class,
         );
 
+        $middleware->prepend(\App\Http\Middleware\ResetTenancy::class);
+
         $middleware->redirectGuestsTo(function (Request $request) {
-            if (tenancy()->check()) {
-                return $request->is('h/*/portal*') ? route('portal.login') : route('tenant.login');
+            if ($request->is('admin', 'admin/*')) {
+                return route('admin.login');
+            }
+            if ($request->is('h/*') && tenancy()->check()) {
+                return $request->is('h/*/portal', 'h/*/portal/*') ? route('portal.login') : route('tenant.login');
             }
 
-            return $request->is('admin*') ? route('admin.login') : route('home');
+            return route('home');
         });
 
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->homeUrl() ?? route('home'));

@@ -1,66 +1,210 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# HMS Cloud — Multi-Tenant SaaS Hospital Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 · Livewire 3 + Volt (class-based) · Spatie Permission (teams) · Herozi Bootstrap 5 theme · MySQL
 
-## About Laravel
+One installation serves many hospitals. A **Super Admin** onboards hospitals, sells subscription plans and
+collects payments; each **hospital** gets its own isolated workspace at `/h/{hospital-slug}` with role-based
+access for its staff and a **patient portal**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Contents
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. [Features](#features)
+2. [Architecture](#architecture)
+3. [Local setup (WAMP, `http://localhost/hms`)](#local-setup)
+4. [Demo logins](#demo-logins)
+5. [Deploying to the VPS (`http://23.230.253.206/hms`)](#deploying-to-the-vps)
+6. [Scheduled jobs & workers](#scheduled-jobs--workers)
+7. [Integrations](#integrations)
+8. [Tests](#tests)
+9. [Project layout](#project-layout)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Features
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Area | Highlights |
+|---|---|
+| **Super Admin** | Hospitals (create, edit, suspend, archive, “open as hospital admin”), subscription plans with module toggles, renewal invoices, bank-transfer proof verification, platform revenue / MRR / storage analytics, global settings, platform audit log |
+| **Hospital admin & RBAC** | Hospital profile & branding, users, **custom roles with per-module permission matrix** (limited to the plan), departments, insurance companies, audit log, subscription & payment proof upload |
+| **Patients & EMR** | Quick (walk-in) & full registration with per-hospital **UHID**, duplicate detection, ID card PDF, vitals with trends & BMI, SOAP notes, ICD-10 diagnoses, allergies, medical history, documents |
+| **Appointments & queue** | Doctor weekly schedules & leaves → free-slot booking, check-in → OPD token, live token board (`wire:poll`), public TV display |
+| **Doctor portal / OPD** | Doctor workspace, consultation screen, **e-prescriptions routed to the pharmacy**, lab & imaging orders routed to diagnostics, automatic follow-up booking |
+| **IPD** | Real-time bed matrix, admission, bed transfers, charges, nurse station with abnormal-vitals alerts, discharge with consolidated final bill & discharge summary PDF |
+| **Pharmacy** | POS with barcode scan, **FEFO batch deduction**, prescription dispensing, IPD credit, returns, medicine master, batches/expiry, stock adjustments & movements, purchase orders + goods receiving, re-order alerts |
+| **Laboratory** | Test catalog with gender-specific & critical ranges, sample collection with **barcode labels**, result entry with live H/L flags, approval, **PDF report with signature image + QR verification** (+ optional PKCS#12 digitally signed PDF), QC log with trend chart, analyzer **device API** |
+| **Radiology** | Imaging catalog & worklist, scheduling, DICOM/image upload, radiologist reports, PACS viewer link (Study Instance UID) |
+| **Billing & finance** | Unified invoices (OPD, IPD, pharmacy, lab, radiology, OT, blood bank, services), payments & refunds, TPA cover & **insurance claims**, expenses, financial dashboard, ageing, doctor revenue, **tax/GST report CSV** |
+| **HR & payroll** | Staff directory (optional login creation), shifts & weekly roster, attendance, attendance-aware payroll, **doctor commission / fee splitting**, payslips |
+| **OT & blood bank** | OT scheduling with room-conflict check, surgical team, WHO-style pre/post-op checklists, charges to IPD bill; donors (90-day rule), TTI screening, component inventory, ABO/Rh-aware **cross-match** & issue |
+| **Telemedicine & portal** | Jitsi video rooms per appointment (Agora-ready), patient portal: appointments booking, reports & prescriptions download, history & vitals trend, bills with bank-transfer reporting, profile — login by **email/password or UHID/phone + OTP** |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+All screens are Livewire/Volt components: tables, filters, modals, searchable dropdowns and pagination update
+without page reloads, and navigation uses `wire:navigate` (SPA-style) with the Herozi header & sidebar persisted.
 
-## Laravel Sponsors
+## Architecture
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+**Tenancy (single database).** Every tenant table has `hospital_id`. Models using
+`App\Models\Concerns\BelongsToHospital` get a global scope (`HospitalScope`) and are force-stamped with the
+active hospital on create. The scope **fails closed**: a web request without a tenant context returns no rows.
 
-### Premium Partners
+```
+/hms/                       landing (find your hospital)
+/hms/admin/...              Super Admin console           (middleware: auth, super_admin)
+/hms/h/{slug}/...           hospital staff area           (middleware: tenant, auth, staff, module:*, can:*)
+/hms/h/{slug}/portal/...    patient portal                (middleware: tenant, auth, patient)
+/hms/template/{page}        original Herozi demo pages    (HMS_TEMPLATE_DEMO=true)
+/hms/api/lab-devices/results  analyzer integration        (Bearer device token)
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+* `IdentifyHospital` resolves the slug, activates the tenant (`App\Support\Tenancy`), sets the Spatie team id,
+  `URL::defaults(['hospital' => slug])`, the hospital timezone, and signs out users of other hospitals.
+  It is registered as **Livewire persistent middleware**, so every component update is tenant-scoped too.
+* `ResetTenancy` (global) clears tenant state at the start of each request.
+* Validation of foreign ids uses `tenant_exists('table')` / `doctor_exists()` so ids from another hospital are rejected.
+* **Plans → modules → permissions** (`config/hms.php`). A permission is only usable if its module is in the
+  hospital’s plan; changing a plan re-syncs every role. Hospital Admin automatically has every permission in the plan.
+* Business rules live in `app/Services` (Billing, OPD, IPD, Pharmacy, Diagnostics, BloodBank, Payroll,
+  Subscription, HospitalProvisioner) and are shared by the UI, portal, API, scheduler and seeders.
+* Uploads are stored privately under `storage/app/private/hospitals/{id}/…` and streamed by `FileController`
+  after an ownership check.
 
-## Contributing
+## Local setup
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Requirements: PHP 8.2+ (gd, intl, mbstring, openssl, pdo_mysql, zip), Composer 2, MySQL 8 / MariaDB 10.6+.
+Node is **not** required — compiled theme assets are committed in `public/assets`.
 
-## Code of Conduct
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Set the database in `.env` (`DB_DATABASE=hms`, `DB_USERNAME`, `DB_PASSWORD`) and `APP_URL=http://localhost/hms`, then:
 
-## Security Vulnerabilities
+```bash
+php artisan migrate --seed
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**WAMP alias** (`C:\wamp64\alias\hms.conf`) — restart Apache afterwards:
 
-## License
+```apache
+Alias /hms "C:/path/to/project/public"
+<Directory "C:/path/to/project/public">
+    Options -Indexes +FollowSymLinks
+    AllowOverride None
+    Require local
+    RewriteEngine On
+    RewriteBase /hms/
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</Directory>
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Open `http://localhost/hms`. (Alternatively `php artisan serve` → `http://127.0.0.1:8000` with `APP_URL` set accordingly.)
+
+Rebuilding theme SCSS is optional: `yarn install && yarn dev` (Laravel Mix; `mix.setResourceRoot('../../')`
+keeps font URLs relative so the app works under `/hms`).
+
+## Demo logins
+
+The seeder creates a Super Admin, **City General Hospital** (`/h/city-hospital`, Enterprise plan, full demo data)
+with one account per default role and a portal patient, and **Sunrise Clinic** (`/h/sunrise-clinic`, Basic plan) for
+isolation testing. The e-mail addresses and the shared demo password are listed at the top of
+`database/seeders/DatabaseSeeder.php`. **Change or remove all demo accounts before going live**
+(production: `php artisan migrate --seed` is not needed — create the Super Admin with the seeder’s platform part or tinker).
+
+## Deploying to the VPS
+
+Target: `http://23.230.253.206/hms` on Ubuntu + Nginx/Apache + PHP-FPM 8.2+.
+
+```bash
+cd /var/www && git clone https://github.com/ShehrrYarr/SaaS-HMS.git hms && cd hms
+composer install --no-dev --optimize-autoloader
+cp .env.example .env && php artisan key:generate
+# .env: APP_ENV=production, APP_DEBUG=false, APP_URL=http://23.230.253.206/hms, DB_*, MAIL_*, HMS_SMS_DRIVER
+php artisan migrate --force
+php artisan db:seed --force          # first install only (demo data) — or seed just plans + super admin
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+sudo chown -R www-data:www-data storage bootstrap/cache
+```
+
+**Nginx (sub-path `/hms`)** — a starting point (not yet tested on the VPS); after deploying, check that `/hms/livewire/livewire.js` and `/hms/assets/css/app.min.css` return 200.
+
+```nginx
+location ^~ /hms {
+    alias /var/www/hms/public;
+    try_files $uri $uri/ @hms;
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/hms/public/index.php;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+}
+location @hms { rewrite ^/hms/(.*)$ /hms/index.php?/$1 last; }
+client_max_body_size 110M;
+```
+
+**Apache**: use the same `Alias` block as the WAMP example (with `Require all granted`).
+
+**PHP** (`php.ini`): `upload_max_filesize = 100M`, `post_max_size = 110M` (DICOM uploads), `memory_limit = 512M`.
+
+The app handles the sub-path itself: Livewire’s script/update endpoints are prefixed with the request base path
+(`App\Support\Livewire\SubdirectoryHandleRequests`), and assets use `asset_v()` (cache-busting `?v=`).
+
+## Scheduled jobs & workers
+
+```cron
+* * * * * cd /var/www/hms && php artisan schedule:run >> /dev/null 2>&1
+```
+
+| Command | When | What |
+|---|---|---|
+| `hms:billing-run` | 01:00 | renewal invoices (7 days before expiry), suspend hospitals unpaid past the grace period |
+| `hms:daily-maintenance` | 01:30 | no-show marking, blood unit expiry, pharmacy expiry/low-stock notifications, storage usage per hospital |
+
+Optional queue worker (Supervisor): `php artisan queue:work --tries=3` (notifications are database-backed and synchronous by default).
+
+## Integrations
+
+* **SMS / OTP** — `HMS_SMS_DRIVER=log|twilio|http` (`App\Services\Sms\SmsManager`). With `log` + `APP_DEBUG=true`
+  the OTP is also shown as a toast for testing.
+* **Telemedicine** — `HMS_TELEMEDICINE_DRIVER=jitsi` (default `meet.jit.si`, set `HMS_JITSI_DOMAIN` for a self-hosted
+  Jitsi). `agora` is scaffolded in `App\Services\Telemedicine\VideoRoom` (add App ID/certificate + token builder).
+* **Lab analyzers** — Lab → Devices issues a token per analyzer/middleware:
+  `POST /hms/api/lab-devices/results` with `Authorization: Bearer <token>` and
+  `{"barcode": "CGH00000012", "results": {"HGB": 13.4}}` (parameter codes from the test catalog). Results still require approval.
+* **PACS** — set *Settings → Hospital Profile → PACS viewer URL* (e.g. an OHIF link containing `{uid}`).
+* **Digitally signed lab reports** — upload a `.p12/.pfx` under *Hospital Profile*; approved reports then offer a signed PDF.
+* **Payments** — manual/bank-transfer only (by design): hospitals upload proof, the Super Admin verifies; patients report transfers from the portal.
+
+## Tests
+
+Tests run against a separate MySQL database `hms_testing` (see `phpunit.xml`) seeded with the demo data:
+
+```bash
+php artisan test
+```
+
+They cover tenant isolation (scoping, cross-tenant URL guessing, login binding, suspension), plan/role access
+control, the main clinical & financial workflows, the device API, and a **smoke test that renders every hospital,
+admin and portal screen and every PDF**.
+
+## Project layout
+
+```
+app/Models                  65+ models (tenant models use BelongsToHospital, key ones Auditable)
+app/Services                business logic (billing, OPD, IPD, pharmacy, diagnostics, payroll, SaaS billing…)
+app/Http/Middleware         IdentifyHospital, ResetTenancy, EnsureStaff/Patient/SuperAdmin, EnsureModuleEnabled
+app/Support                 Tenancy, Sequence (document numbers), Menu, Permissions, DocumentAssets
+config/hms.php              modules, permissions, default roles, currencies
+resources/views/livewire    Volt pages: admin/*, tenant/*, portal/*, auth/*
+resources/views/components  modal, form inputs, search-select, table toolbar, stat cards…
+resources/views/pdf         dompdf templates
+resources/views/template    original Herozi demo pages (/template/*)
+```

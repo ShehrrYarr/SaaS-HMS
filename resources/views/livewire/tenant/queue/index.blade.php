@@ -28,13 +28,30 @@ new #[Layout('layouts.app')] #[Title('OPD Queue')] class extends Component
 
         $visit = $opd->createVisit(Patient::findOrFail($this->patient_id), Staff::doctors()->findOrFail($this->doctor_id), ['chief_complaint' => $this->complaint]);
         $this->reset('patient_id', 'complaint');
-        $this->toast("Token #{$visit->token_no} issued for {$visit->patient->full_name}");
-        $this->dispatch('print', url: route('tenant.opd.slip', $visit->id));
+        // The print prompt replaces any toast, so it carries the token number itself.
+        $this->dispatch('print', url: route('tenant.opd.slip', $visit->id), title: "Token #{$visit->token_no} issued for {$visit->patient->full_name}");
+    }
+
+    /** The visit this doctor is consulting right now, if any (calling another would hide it). */
+    protected function busyWith(int $doctorId, ?int $exceptVisitId = null): ?OpdVisit
+    {
+        return OpdVisit::where('doctor_id', $doctorId)->whereDate('visit_date', today())->where('status', 'in_consultation')
+            ->when($exceptVisitId, fn ($q) => $q->whereKeyNot($exceptVisitId))->orderBy('token_no')->first();
+    }
+
+    protected function warnBusy(OpdVisit $busy): void
+    {
+        $this->toast("Token #{$busy->token_no} is still with the doctor. Mark it Done or send it back to the queue first.", 'warning');
     }
 
     public function callNext(int $doctorId, OpdService $opd): void
     {
         $this->authorize('queue.manage');
+        if ($busy = $this->busyWith($doctorId)) {
+            $this->warnBusy($busy);
+
+            return;
+        }
         $next = OpdVisit::where('doctor_id', $doctorId)->whereDate('visit_date', today())->where('status', 'waiting')->orderBy('token_no')->first();
         if (! $next) {
             $this->toast('No patients waiting.', 'info');
@@ -49,6 +66,11 @@ new #[Layout('layouts.app')] #[Title('OPD Queue')] class extends Component
     {
         $this->authorize('queue.manage');
         $visit = OpdVisit::findOrFail($visitId);
+        if ($status === 'in_consultation' && $busy = $this->busyWith($visit->doctor_id, $visit->id)) {
+            $this->warnBusy($busy);
+
+            return;
+        }
         match ($status) {
             'in_consultation' => $opd->startConsultation($visit),
             'completed' => $opd->completeConsultation($visit),
@@ -104,7 +126,8 @@ new #[Layout('layouts.app')] #[Title('OPD Queue')] class extends Component
         @forelse ($doctors as $doctor)
             @php
                 $list = $visits->get($doctor->id, collect());
-                $current = $list->firstWhere('status', 'in_consultation');
+                $consulting = $list->where('status', 'in_consultation')->values();
+                $current = $consulting->first();
                 $waiting = $list->where('status', 'waiting');
                 $done = $list->where('status', 'completed')->count();
             @endphp
@@ -126,6 +149,13 @@ new #[Layout('layouts.app')] #[Title('OPD Queue')] class extends Component
                                     <button class="btn btn-sm btn-light" wire:click="setStatus({{ $current->id }}, 'waiting')">Back to queue</button>
                                 </div>
                             @endif
+                            @foreach ($consulting->skip(1) as $extra)
+                                <div class="mt-2 fs-12">
+                                    Also with the doctor: <strong>#{{ $extra->token_no }}</strong> {{ $extra->patient->full_name }}
+                                    <button class="btn btn-link btn-sm p-0 ms-1" wire:click="setStatus({{ $extra->id }}, 'completed')">Done</button>
+                                    <button class="btn btn-link btn-sm p-0 ms-1" wire:click="setStatus({{ $extra->id }}, 'waiting')">Back to queue</button>
+                                </div>
+                            @endforeach
                         </div>
                         <button class="btn btn-primary w-100 mb-3" wire:click="callNext({{ $doctor->id }})" @disabled($waiting->isEmpty())>
                             <i class="ri-megaphone-line me-1"></i> Call next ({{ $waiting->count() }} waiting)

@@ -26,7 +26,8 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
 
     public bool $showForm = false;
 
-    public array $form = [];
+    /** Keys bound by searchable dropdowns must exist on first render, before the modal fills them. */
+    public array $form = ['patient_id' => null];
 
     public ?int $activeId = null;
 

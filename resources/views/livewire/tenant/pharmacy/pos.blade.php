@@ -188,8 +188,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         );
 
         $this->clear();
-        $this->toast("Sale {$sale->sale_no} completed · ".money($sale->total));
-        $this->dispatch('print', url: route('tenant.pharmacy.receipt', $sale->id));
+        // The print prompt replaces any toast, so it carries the sale summary itself.
+        $this->dispatch('print', url: route('tenant.pharmacy.receipt', $sale->id), title: "Sale {$sale->sale_no} completed · ".money($sale->total));
     }
 
     public function with(): array

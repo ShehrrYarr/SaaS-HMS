@@ -28,7 +28,8 @@ new #[Layout('layouts.app')] #[Title('Imaging Orders')] class extends Component
 
     public bool $showForm = false;
 
-    public array $form = [];
+    /** Keys bound by searchable dropdowns must exist on first render, before the modal fills them. */
+    public array $form = ['patient_id' => null, 'doctor_id' => null];
 
     public function create(): void
     {

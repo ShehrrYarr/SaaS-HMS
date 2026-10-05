@@ -33,7 +33,8 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
 
     public bool $showForm = false;
 
-    public array $form = [];
+    /** Keys bound by searchable dropdowns must exist on first render, before the modal fills them. */
+    public array $form = ['id' => null, 'patient_id' => null, 'doctor_id' => null, 'appointment_date' => null, 'start_time' => null, 'mode' => 'in_person', 'source' => 'walk_in', 'reason' => '', 'fee' => ''];
 
     public ?string $patientLabel = null;
 
@@ -96,6 +97,9 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
     public function save(AppointmentService $service): void
     {
         $this->authorize('appointments.manage');
+        if ($this->form['id'] && ! $this->stillOpen(Appointment::findOrFail($this->form['id']))) {
+            return;
+        }
         $this->validate([
             'form.patient_id' => ['required', tenant_exists('patients')],
             'form.doctor_id' => ['required', doctor_exists()],
@@ -117,8 +121,29 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
     {
         $this->authorize('appointments.manage');
         abort_unless(in_array($status, ['confirmed', 'no_show']), 400);
-        Appointment::findOrFail($id)->update(['status' => $status]);
-        $this->toast('Appointment '.label($status).'.');
+        $appointment = Appointment::findOrFail($id);
+        if (! $this->stillOpen($appointment)) {
+            return;
+        }
+        if ($status === 'no_show' && $appointment->appointment_date->isFuture()) {
+            $this->toast('A future appointment cannot be marked as a no-show. Cancel or reschedule it instead.', 'warning');
+
+            return;
+        }
+        $appointment->update(['status' => $status]);
+        $this->toast($status === 'no_show' ? "Appointment {$appointment->appointment_no} marked as a no-show." : "Appointment {$appointment->appointment_no} confirmed.");
+    }
+
+    /** Booked and confirmed appointments can still change; once checked in or closed they can't (the list may be stale). */
+    protected function stillOpen(Appointment $appointment): bool
+    {
+        if (in_array($appointment->status, ['booked', 'confirmed'], true)) {
+            return true;
+        }
+        $this->showForm = $this->showCancel = false;
+        $this->toast("Appointment {$appointment->appointment_no} is already ".strtolower(label($appointment->status)).', so it can no longer be changed.', 'warning');
+
+        return false;
     }
 
     public function checkIn(int $id, OpdService $opd): void
@@ -139,7 +164,11 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
     {
         $this->authorize('appointments.manage');
         $this->validate(['cancelReason' => 'required|string|max:200']);
-        Appointment::findOrFail($this->cancelId)->update(['status' => 'cancelled', 'cancel_reason' => $this->cancelReason]);
+        $appointment = Appointment::findOrFail($this->cancelId);
+        if (! $this->stillOpen($appointment)) {
+            return;
+        }
+        $appointment->update(['status' => 'cancelled', 'cancel_reason' => $this->cancelReason]);
         $this->showCancel = false;
         $this->toast('Appointment cancelled.', 'warning');
     }
@@ -228,7 +257,9 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
                                     @can('appointments.manage')
                                         @if ($a->status === 'booked')<button class="btn btn-sm btn-light-info icon-btn-sm" title="Confirm" wire:click="setStatus({{ $a->id }}, 'confirmed')"><i class="ri-check-line"></i></button>@endif
                                         <button class="btn btn-sm btn-light-primary icon-btn-sm" title="Reschedule" wire:click="edit({{ $a->id }})"><i class="ri-calendar-2-line"></i></button>
-                                        <button class="btn btn-sm btn-light-warning icon-btn-sm" title="No show" x-on:click="$confirm('Mark as no-show?', () => $wire.setStatus({{ $a->id }}, 'no_show'), { color: 'warning' })"><i class="ri-user-unfollow-line"></i></button>
+                                        @unless ($a->appointment_date->isFuture())
+                                            <button class="btn btn-sm btn-light-warning icon-btn-sm" title="No show" x-on:click="$confirm('Mark as no-show?', () => $wire.setStatus({{ $a->id }}, 'no_show'), { color: 'warning' })"><i class="ri-user-unfollow-line"></i></button>
+                                        @endunless
                                         <button class="btn btn-sm btn-light-danger icon-btn-sm" title="Cancel" wire:click="askCancel({{ $a->id }})"><i class="ri-close-line"></i></button>
                                     @endcan
                                 @endif

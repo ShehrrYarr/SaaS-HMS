@@ -18,7 +18,8 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
 
     public Hospital $hospital;
 
-    public array $form = [];
+    /** Keys bound by searchable dropdowns must exist on first render, before the modal fills them. */
+    public array $form = ['timezone' => null];
 
     public ?int $plan_id = null;
 

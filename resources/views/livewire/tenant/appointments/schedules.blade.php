@@ -26,7 +26,10 @@ new #[Layout('layouts.app')] #[Title('Doctor Schedules')] class extends Componen
 
     public function mount(): void
     {
-        $this->doctorId ??= (string) Staff::doctors()->active()->orderBy('name')->value('id');
+        // An old bookmark may point at a doctor who has since left; fall back to the first active one.
+        if (! $this->doctorId || ! Staff::doctors()->active()->whereKey($this->doctorId)->exists()) {
+            $this->doctorId = (string) Staff::doctors()->active()->orderBy('name')->value('id');
+        }
     }
 
     public function add(): void
@@ -41,7 +44,7 @@ new #[Layout('layouts.app')] #[Title('Doctor Schedules')] class extends Componen
             'form.max_patients' => 'nullable|integer|min:1',
             'form.room' => 'nullable|string|max:50',
             'copyDays' => 'array',
-        ]);
+        ], ['form.end_time.after' => 'The end time must be later than the start time.']);
 
         $days = array_unique(array_merge([(int) $this->form['day_of_week']], array_map('intval', $this->copyDays)));
         foreach ($days as $day) {

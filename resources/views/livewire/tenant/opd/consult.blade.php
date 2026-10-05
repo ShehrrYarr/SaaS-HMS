@@ -2,6 +2,7 @@
 
 use App\Livewire\Concerns\Toasts;
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\OpdVisit;
@@ -10,6 +11,7 @@ use App\Models\RadiologyTest;
 use App\Services\AppointmentService;
 use App\Services\DiagnosticsService;
 use App\Services\OpdService;
+use App\Support\AllergyCheck;
 use App\Support\Sequence;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -31,6 +33,9 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
     public string $advice = '';
 
     public ?string $followUp = null;
+
+    /** The doctor ticked "I have reviewed the allergy warning". */
+    public bool $allergyOverride = false;
 
     // Orders
     public array $labTests = [];
@@ -85,6 +90,22 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
         }
     }
 
+    /** Item index => "Penicillin (severe)" for lines that match a recorded allergy. */
+    protected function allergyWarnings(): array
+    {
+        $patient = $this->visit->patient->loadMissing('allergies');
+        $medicines = Medicine::whereIn('id', array_filter(array_column($this->items, 'medicine_id')))->get()->keyBy('id');
+        $warnings = [];
+        foreach ($this->items as $i => $item) {
+            $hits = AllergyCheck::conflicts($patient, $item['medicine_name'] ?? '', $medicines->get($item['medicine_id'] ?? 0));
+            if ($hits->isNotEmpty()) {
+                $warnings[$i] = AllergyCheck::describe($hits);
+            }
+        }
+
+        return $warnings;
+    }
+
     public function savePrescription(): void
     {
         $this->authorize('prescriptions.create');
@@ -100,6 +121,13 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
             'advice' => 'nullable|string|max:2000',
             'followUp' => 'nullable|date|after:today',
         ], [], ['items.*.medicine_name' => 'medicine']);
+
+        $warnings = $this->allergyWarnings();
+        if ($warnings && ! $this->allergyOverride) {
+            $this->addError('allergy', 'This prescription conflicts with a recorded allergy. Review it, then tick the box to issue it anyway.');
+
+            return;
+        }
 
         $rx = DB::transaction(function () {
             $rx = Prescription::create([
@@ -131,9 +159,14 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
             return $rx;
         });
 
+        if ($warnings) {
+            AuditLog::record('allergy_override', $rx, [], ['allergies' => array_values($warnings)], 'Prescription issued despite an allergy warning');
+        }
+
         $this->items = [];
         $this->addItem();
         $this->advice = '';
+        $this->allergyOverride = false;
         $this->toast("Prescription {$rx->prescription_no} sent to pharmacy.");
     }
 
@@ -161,17 +194,30 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
         $this->validate(['followUp' => 'nullable|date|after:today']);
         $opd->completeConsultation($this->visit, $this->followUp);
 
+        $booked = null;
         if ($this->followUp && hospital()->hasModule('appointments')) {
             $slots = $appointments->availableSlots($this->visit->doctor, $this->followUp);
             if ($slots) {
-                $appointments->book($this->visit->patient, $this->visit->doctor, [
+                $booked = $appointments->book($this->visit->patient, $this->visit->doctor, [
                     'appointment_date' => $this->followUp, 'start_time' => array_key_first($slots), 'source' => 'phone',
                     'reason' => 'Follow-up of '.$this->visit->visit_no, 'fee' => $this->visit->doctor->follow_up_fee,
                 ]);
             }
         }
+        if ($this->followUp) {
+            // The prescription may have been issued before the follow-up date was picked.
+            $this->visit->prescriptions()->whereNull('follow_up_date')->update(['follow_up_date' => $this->followUp]);
+        }
 
-        session()->flash('success', 'Consultation completed'.($this->followUp ? ' · follow-up booked for '.fmt_date($this->followUp) : '').'.');
+        if (! $this->followUp) {
+            session()->flash('success', 'Consultation completed.');
+        } elseif ($booked) {
+            session()->flash('success', 'Consultation completed · follow-up booked for '.fmt_date($this->followUp).' at '.fmt_time($booked->start_time).'.');
+        } elseif (hospital()->hasModule('appointments')) {
+            session()->flash('warning', 'Consultation completed, but '.$this->visit->doctor->display_name.' has no free slot on '.fmt_date($this->followUp).'. Book the follow-up from Appointments.');
+        } else {
+            session()->flash('success', 'Consultation completed · follow-up due '.fmt_date($this->followUp).'.');
+        }
 
         return $this->redirect(route('tenant.doctor.workspace'), navigate: true);
     }
@@ -189,6 +235,7 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
             'imagingCatalog' => hospital()->hasModule('radiology') ? RadiologyTest::where('is_active', true)->orderBy('name')->get() : collect(),
             'previous' => $patient->opdVisits()->with('doctor', 'diagnoses')->whereKeyNot($this->visit->id)->latest('visit_date')->limit(5)->get(),
             'frequencies' => self::FREQUENCIES,
+            'allergyWarnings' => $this->allergyWarnings(),
         ];
     }
 }; ?>
@@ -333,10 +380,20 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
                                     <div class="col-3"><input type="number" class="form-control form-control-sm" title="Quantity" wire:model="items.{{ $i }}.quantity"></div>
                                     <div class="col-5"><input type="text" class="form-control form-control-sm" placeholder="Instructions" wire:model="items.{{ $i }}.instructions"></div>
                                 </div>
+                                @isset($allergyWarnings[$i])
+                                    <div class="alert alert-danger py-1 px-2 fs-12 mt-2 mb-0" role="alert"><i class="ri-alarm-warning-line me-1"></i>Allergy: {{ $allergyWarnings[$i] }}. This medicine may cause a reaction.</div>
+                                @endisset
                             </div>
                         @endforeach
                         <x-form.textarea class="mt-3" label="Advice" model="advice" rows="2" placeholder="Diet, rest, warning signs..." />
                         <x-form.input label="Follow-up date" model="followUp" type="date" hint="On completion a follow-up appointment is booked automatically." />
+                        @if ($allergyWarnings)
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="allergyOverride" wire:model="allergyOverride">
+                                <label class="form-check-label fs-13 text-danger" for="allergyOverride">I have reviewed the allergy warning and want to issue this prescription.</label>
+                            </div>
+                            @error('allergy')<div class="text-danger fs-12 mb-2">{{ $message }}</div>@enderror
+                        @endif
                         <button class="btn btn-primary w-100" wire:click="savePrescription" wire:loading.attr="disabled"><i class="ri-send-plane-fill me-1"></i>Issue prescription → Pharmacy</button>
                     @endcan
 

@@ -67,8 +67,8 @@ new #[Layout('layouts.app')] #[Title('OPD Visits')] class extends Component
         ], fn ($v) => $v !== null));
 
         $this->showForm = false;
-        $this->toast("Visit {$visit->visit_no} created · token #{$visit->token_no}");
-        $this->dispatch('print', url: route('tenant.opd.slip', $visit->id));
+        // The print prompt replaces any toast, so it carries the visit and token number itself.
+        $this->dispatch('print', url: route('tenant.opd.slip', $visit->id), title: "Visit {$visit->visit_no} created · token #{$visit->token_no}");
     }
 
     public function with(): array

@@ -16,7 +16,8 @@
         <tr><td>Age/Sex</td><td class="right">{{ $visit->patient->age_gender }}</td></tr>
         <tr><td>Visit</td><td class="right">{{ $visit->visit_no }} · {{ ucwords(str_replace('_', ' ', $visit->visit_type)) }}</td></tr>
         <tr><td>Date</td><td class="right">{{ $visit->visit_date->format('d M Y h:i A') }}</td></tr>
-        <tr><td>Fee</td><td class="right">{{ money($visit->fee) }} @if ($visit->invoice)({{ strtoupper($visit->invoice->status) }})@endif</td></tr>
+        {{-- The amount to pay is the invoice total (fee + tax), not the bare doctor fee. --}}
+        <tr><td>{{ $visit->invoice ? 'Amount' : 'Fee' }}</td><td class="right">{{ money($visit->invoice?->total ?? $visit->fee) }} @if ($visit->invoice)({{ strtoupper($visit->invoice->status) }})@endif</td></tr>
     </table>
     <div class="center" style="margin-top: 6px;"><img src="{{ $barcode }}" style="height: 22px; width: 150px;"></div>
     <p class="center small">Please wait for your token to be called.</p>

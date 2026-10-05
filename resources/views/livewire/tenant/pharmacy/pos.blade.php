@@ -2,12 +2,14 @@
 
 use App\Livewire\Concerns\SearchesPatients;
 use App\Livewire\Concerns\Toasts;
+use App\Models\AuditLog;
 use App\Models\BankAccount;
 use App\Models\IpdAdmission;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Services\PharmacyService;
+use App\Support\AllergyCheck;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -41,6 +43,9 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
     public string $discount = '0';
 
     public string $tendered = '';
+
+    /** The pharmacist ticked "I have checked the allergy warning". */
+    public bool $allergyReviewed = false;
 
     public function mount(): void
     {
@@ -121,17 +126,37 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
     public function clear(): void
     {
-        $this->reset('cart', 'patient_id', 'patientLabel', 'customer_name', 'customer_phone', 'prescription_id', 'admission_id', 'discount', 'tendered');
+        $this->reset('cart', 'patient_id', 'patientLabel', 'customer_name', 'customer_phone', 'prescription_id', 'admission_id', 'discount', 'tendered', 'allergyReviewed');
         $this->payment_method = (string) BankAccount::cash()->id;
     }
 
     public function updatedPatientId($id): void
     {
+        $this->allergyReviewed = false;
         $p = Patient::with('currentAdmission')->find($id);
         $this->admission_id = $p?->currentAdmission?->id;
         if (! $this->admission_id && $this->payment_method === 'ipd_credit') {
             $this->payment_method = (string) BankAccount::cash()->id;
         }
+    }
+
+    /** Cart line => recorded allergies the medicine may trigger, for the selected patient. */
+    protected function allergyWarnings(): array
+    {
+        $patient = $this->patient_id ? Patient::with('allergies')->find($this->patient_id) : null;
+        if (! $patient || $patient->allergies->isEmpty() || ! $this->cart) {
+            return [];
+        }
+        $medicines = Medicine::whereIn('id', array_keys($this->cart))->get()->keyBy('id');
+        $warnings = [];
+        foreach ($this->cart as $id => $line) {
+            $hits = AllergyCheck::conflicts($patient, $line['name'], $medicines->get($id));
+            if ($hits->isNotEmpty()) {
+                $warnings[$id] = AllergyCheck::describe($hits);
+            }
+        }
+
+        return $warnings;
     }
 
     protected function totals(): array
@@ -165,6 +190,12 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
             return;
         }
+        $warnings = $this->allergyWarnings();
+        if ($warnings && ! $this->allergyReviewed) {
+            $this->addError('allergy', 'A medicine in the cart may trigger a recorded allergy. Check it, then tick the box to continue.');
+
+            return;
+        }
         $rxRequired = collect($this->cart)->contains(fn ($l) => $l['rx']);
         if ($rxRequired && ! $this->prescription_id && ! $this->admission_id && ! $this->patient_id) {
             $this->addError('cart', 'Prescription-only medicines in cart: select the patient / prescription.');
@@ -187,6 +218,10 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
             ]
         );
 
+        if ($warnings) {
+            AuditLog::record('allergy_override', $sale, [], ['allergies' => array_values($warnings)], 'Medicine sold despite an allergy warning');
+        }
+
         $this->clear();
         // The print prompt replaces any toast, so it carries the sale summary itself.
         $this->dispatch('print', url: route('tenant.pharmacy.receipt', $sale->id), title: "Sale {$sale->sale_no} completed · ".money($sale->total));
@@ -199,6 +234,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         return [
             'results' => Medicine::withStock()->where('is_active', true)->search($term)->orderBy('name')->limit($term === '' ? 12 : 24)->get(),
             'totals' => $this->totals(),
+            'allergyWarnings' => $this->allergyWarnings(),
             'prescription' => $this->prescription_id ? Prescription::with('doctor')->find($this->prescription_id) : null,
             'admission' => $this->admission_id ? IpdAdmission::with('bed.ward')->find($this->admission_id) : null,
             'accounts' => BankAccount::active()->ordered()->get(),
@@ -278,10 +314,13 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
                                     <div class="fs-13 fw-semibold text-truncate">{{ $line['name'] }} @if ($line['rx'])<span class="badge bg-warning-subtle text-warning">Rx</span>@endif</div>
                                     <div class="fs-12 text-muted">{{ money($line['price']) }} × {{ $line['qty'] }} @if ($line['tax'] > 0)· tax {{ $line['tax'] }}%@endif</div>
                                 </div>
-                                <input type="number" min="1" max="{{ $line['stock'] }}" class="form-control form-control-sm" style="width: 70px;" wire:model.live.debounce.400ms="cart.{{ $id }}.qty">
+                                <input type="number" min="1" max="{{ $line['stock'] }}" class="form-control form-control-sm" style="width: 70px;" wire:model.live="cart.{{ $id }}.qty">
                                 <span class="fw-semibold text-nowrap" style="width: 80px; text-align: right;">{{ money($line['price'] * $line['qty']) }}</span>
-                                <button class="btn btn-sm btn-link text-danger p-0" wire:click="remove({{ $id }})"><i class="ri-delete-bin-line"></i></button>
+                                <button class="btn btn-sm btn-link text-danger p-0" wire:click="remove({{ $id }})" title="Remove"><i class="ri-delete-bin-line"></i></button>
                             </div>
+                            @isset($allergyWarnings[$id])
+                                <div class="alert alert-danger py-1 px-2 fs-12 mt-1 mb-0" role="alert"><i class="ri-alarm-warning-line me-1"></i>Allergy: {{ $allergyWarnings[$id] }}. This medicine may cause a reaction.</div>
+                            @endisset
                         @empty
                             <div class="text-center text-muted py-4"><i class="ri-shopping-cart-line fs-1 d-block opacity-50"></i>Scan or click a medicine to add it.</div>
                         @endforelse
@@ -289,7 +328,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
                     @error('cart')<div class="alert alert-danger py-2">{{ $message }}</div>@enderror
 
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ money($totals['subtotal']) }}</span></div>
-                    <div class="d-flex justify-content-between align-items-center my-1"><span>Discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.500ms="discount"></div>
+                    <div class="d-flex justify-content-between align-items-center my-1"><span>Discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end @error('discount') is-invalid @enderror" style="width: 110px;" wire:model.live="discount"></div>
+                    @error('discount')<div class="text-danger fs-12 text-end mb-1">{{ $message }}</div>@enderror
                     <div class="d-flex justify-content-between"><span>Tax</span><span>{{ money($totals['tax']) }}</span></div>
                     <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-2 mt-2"><span>Total</span><span>{{ money($totals['total']) }}</span></div>
 
@@ -303,9 +343,16 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
                     @error('payment_method')<div class="text-danger fs-12 mb-2">{{ $message }}</div>@enderror
                     @if ($accounts->firstWhere('id', (int) $payment_method)?->isCash())
                         <div class="d-flex gap-2 align-items-center mb-3">
-                            <input type="number" step="1" min="0" inputmode="numeric" class="form-control" placeholder="Amount tendered" wire:model.live.debounce.400ms="tendered">
+                            <input type="number" step="1" min="0" inputmode="numeric" class="form-control" placeholder="Amount tendered" wire:model.live="tendered">
                             <span class="text-nowrap">Change: <strong>{{ money($totals['change']) }}</strong></span>
                         </div>
+                    @endif
+                    @if ($allergyWarnings)
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="allergyReviewed" wire:model="allergyReviewed">
+                            <label class="form-check-label fs-13 text-danger" for="allergyReviewed">I have checked the allergy warning with the patient or doctor.</label>
+                        </div>
+                        @error('allergy')<div class="text-danger fs-12 mb-2">{{ $message }}</div>@enderror
                     @endif
                     <button class="btn btn-success w-100 btn-lg" wire:click="checkout" wire:loading.attr="disabled" @disabled(empty($cart))>
                         <span wire:loading.remove wire:target="checkout"><i class="ri-secure-payment-line me-1"></i>Complete sale &amp; print</span>

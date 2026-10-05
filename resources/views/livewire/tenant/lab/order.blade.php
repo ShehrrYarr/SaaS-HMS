@@ -177,7 +177,7 @@ new #[Layout('layouts.app')] #[Title('Lab Order')] class extends Component
                                         @if ($p->result_type === 'option')
                                             <select class="form-select form-select-sm" wire:model.live="values.{{ $p->id }}"><option value="">—</option>@foreach ($p->options ?? [] as $opt)<option>{{ $opt }}</option>@endforeach</select>
                                         @else
-                                            <input type="{{ $p->result_type === 'numeric' ? 'text' : 'text' }}" inputmode="{{ $p->result_type === 'numeric' ? 'decimal' : 'text' }}" class="form-control form-control-sm" wire:model.live.debounce.500ms="values.{{ $p->id }}">
+                                            <input type="{{ $p->result_type === 'numeric' ? 'text' : 'text' }}" inputmode="{{ $p->result_type === 'numeric' ? 'decimal' : 'text' }}" class="form-control form-control-sm" wire:model.live="values.{{ $p->id }}">
                                         @endif
                                     </td>
                                     <td class="text-muted">{{ $p->unit }}</td>

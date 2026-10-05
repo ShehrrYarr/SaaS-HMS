@@ -1,7 +1,8 @@
 @props(['label' => null, 'model', 'type' => 'text', 'required' => false, 'live' => false, 'hint' => null, 'prepend' => null, 'append' => null, 'id' => null])
 @php
     $id = $id ?? 'f_'.str_replace(['.', '-'], '_', $model);
-    $directive = $live ? 'wire:model.live.debounce.400ms' : 'wire:model';
+    // No .debounce here: it also delays the local value, so a quick click on Save would send the old one.
+    $directive = $live ? 'wire:model.live' : 'wire:model';
 @endphp
 <div {{ $attributes->only('class')->merge(['class' => 'mb-3']) }}>
     @if ($label)

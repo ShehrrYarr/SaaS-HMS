@@ -24,7 +24,7 @@ class SurfaceServiceErrors extends ComponentHook
         $bag = $e->validator->errors();
         $unplaced = [];
         foreach ($e->errors() as $key => $messages) {
-            if (Utils::hasProperty($this->component, $key)) {
+            if (Utils::hasProperty($this->component, $key) || $this->viewShows($key)) {
                 continue;
             }
             $field = $this->formFieldFor($key);
@@ -36,6 +36,14 @@ class SurfaceServiceErrors extends ComponentHook
         if ($unplaced) {
             $this->component->dispatch('toast', type: 'error', message: implode(' ', array_unique($unplaced)));
         }
+    }
+
+    /** The component's own view already prints this error, e.g. @error('quantity') in the stock modal. */
+    protected function viewShows(string $key): bool
+    {
+        $file = resource_path('views/livewire/'.str_replace('.', '/', $this->component->getName()).'.blade.php');
+
+        return is_file($file) && str_contains(file_get_contents($file), "@error('{$key}')");
     }
 
     /** "bed_id" → "form.bed_id" when a public array property holds that key. */

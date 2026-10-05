@@ -3,6 +3,7 @@
 use App\Livewire\Concerns\WithTable;
 use App\Models\BankAccount;
 use App\Models\Invoice;
+use App\Models\IpdCharge;
 use App\Models\PharmacySale;
 use App\Services\BillingService;
 use App\Services\LedgerService;
@@ -59,6 +60,11 @@ new #[Layout('layouts.app')] #[Title('Pharmacy Sales')] class extends Component
         if ($sale->status !== 'completed') {
             return;
         }
+        if ($sale->ipd_admission_id && IpdCharge::where('source_type', $sale->getMorphClass())->where('source_id', $sale->id)->where('billed', true)->exists()) {
+            $this->toast("{$sale->sale_no} is already on the patient's final IPD bill, so it can't be returned here. Adjust that bill instead.", 'error');
+
+            return;
+        }
         if ($sale->payment_method !== 'ipd_credit') {
             $this->validate(['refundAccount' => ['required', bank_account_exists()]], [], ['refundAccount' => 'refund account']);
         }
@@ -68,6 +74,9 @@ new #[Layout('layouts.app')] #[Title('Pharmacy Sales')] class extends Component
                 $pharmacy->move($item->batch, $item->quantity, 'return', $sale, "Return of {$sale->sale_no}");
             }
             $sale->update(['status' => 'returned']);
+            if ($sale->prescription_id) {
+                $pharmacy->unapplyFromPrescription($sale);
+            }
 
             $invoice = Invoice::whereHas('items', fn ($q) => $q->where('source_type', $sale->getMorphClass())->where('source_id', $sale->id))->first();
             if ($invoice && $invoice->paid_amount > 0) {
@@ -77,7 +86,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy Sales')] class extends Component
                 $ledger->moneyOut($this->refundAccount, $sale->total, 'refund', $sale, "Return of pharmacy sale {$sale->sale_no}");
             }
             if ($sale->ipd_admission_id) {
-                \App\Models\IpdCharge::where('source_type', $sale->getMorphClass())->where('source_id', $sale->id)->where('billed', false)->delete();
+                IpdCharge::where('source_type', $sale->getMorphClass())->where('source_id', $sale->id)->where('billed', false)->delete();
             }
         });
 

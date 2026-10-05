@@ -13,6 +13,7 @@ use App\Models\StockMovement;
 use App\Support\Sequence;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -110,15 +111,19 @@ class PharmacyService
                 $this->applyToPrescription($sale);
             }
 
+            // Name the medicines on the patient's bill, e.g. "Pharmacy sale PH-26-00011: Ceftriaxone 1g Inj × 2".
+            $summary = Str::limit("Pharmacy sale {$sale->sale_no}: ".$sale->items()->with('medicine')->get()->groupBy('medicine_id')
+                ->map(fn ($items) => $items->first()->medicine->name.' × '.$items->sum('quantity'))->implode(', '), 250);
+
             if ($isCredit) {
                 $admission = IpdAdmission::findOrFail($sale->ipd_admission_id);
                 $this->ipd->addCharge($admission, [
-                    'category' => 'medicine', 'description' => "Pharmacy sale {$sale->sale_no}", 'unit_price' => $total, 'source' => $sale,
+                    'category' => 'medicine', 'description' => $summary, 'unit_price' => $total, 'source' => $sale,
                 ]);
             } elseif ($sale->patient_id && hospital()?->hasModule('billing')) {
                 // Mirror into the patient's unified bill as a settled invoice (the receipt posts to the account).
                 $invoice = $this->billing->createInvoice(Patient::findOrFail($sale->patient_id), [[
-                    'service_type' => 'pharmacy', 'description' => "Pharmacy sale {$sale->sale_no}", 'unit_price' => $total, 'source' => $sale,
+                    'service_type' => 'pharmacy', 'description' => $summary, 'unit_price' => $total, 'source' => $sale,
                 ]]);
                 if ($invoice->balance > 0) {
                     $this->billing->addPayment($invoice, $invoice->balance, $account, $sale->sale_no);
@@ -150,12 +155,13 @@ class PharmacyService
                     'supplier_id' => $order->supplier_id,
                     'purchase_order_id' => $order->id,
                     'batch_no' => $row['batch_no'],
-                    'mfg_date' => $row['mfg_date'] ?? null,
+                    // Blank form fields arrive as '' and MySQL rejects '' for dates and amounts.
+                    'mfg_date' => ($row['mfg_date'] ?? '') ?: null,
                     'expiry_date' => $row['expiry_date'],
                     'quantity_received' => $qty,
                     'quantity_available' => 0,
                     'purchase_price' => $item->unit_price,
-                    'sale_price' => $row['sale_price'] ?? $item->medicine->sale_price,
+                    'sale_price' => ($row['sale_price'] ?? '') !== '' ? $row['sale_price'] : $item->medicine->sale_price,
                 ]);
                 $this->move($batch, $qty, 'purchase', $order, "PO {$order->po_no}");
                 $item->increment('received_qty', $qty);
@@ -194,6 +200,31 @@ class PharmacyService
             'note' => $note,
             'user_id' => auth()->id(),
         ]);
+    }
+
+    /** A returned sale gives its quantities back to the prescription it dispensed. */
+    public function unapplyFromPrescription(PharmacySale $sale): void
+    {
+        $prescription = Prescription::with('items')->find($sale->prescription_id);
+        if (! $prescription) {
+            return;
+        }
+        $returned = $sale->items->groupBy('medicine_id')->map->sum('quantity');
+        foreach ($prescription->items as $item) {
+            if ($item->medicine_id && ($qty = $returned[$item->medicine_id] ?? 0) > 0) {
+                $back = min($qty, (int) $item->dispensed_qty);
+                $item->decrement('dispensed_qty', $back);
+                $returned[$item->medicine_id] = $qty - $back;
+            }
+        }
+        $prescription->refresh()->load('items');
+        $linked = $prescription->items->filter(fn ($i) => $i->medicine_id);
+        $status = match (true) {
+            $linked->every(fn ($i) => $i->dispensed_qty >= $i->quantity) => 'dispensed',
+            $linked->every(fn ($i) => (int) $i->dispensed_qty === 0) => 'issued',
+            default => 'partially_dispensed',
+        };
+        $prescription->update(['status' => $status, 'dispensed_at' => $status === 'issued' ? null : $prescription->dispensed_at]);
     }
 
     protected function applyToPrescription(PharmacySale $sale): void

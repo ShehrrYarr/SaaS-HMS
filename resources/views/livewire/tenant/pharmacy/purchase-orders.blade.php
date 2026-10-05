@@ -160,17 +160,19 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
                 @foreach ($lines as $i => $l)
                     <tr wire:key="pol-{{ $i }}">
                         <td><x-form.search-select class="mb-0" model="lines.{{ $i }}.medicine_id" :options="$medicines" live /></td>
-                        <td><input type="number" min="1" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.quantity"></td>
-                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.unit_price"></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.tax_percent"></td>
+                        <td><input type="number" min="1" class="form-control form-control-sm @error('lines.'.$i.'.quantity') is-invalid @enderror" wire:model.live="lines.{{ $i }}.quantity"></td>
+                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('lines.'.$i.'.unit_price') is-invalid @enderror" wire:model.live="lines.{{ $i }}.unit_price"></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm @error('lines.'.$i.'.tax_percent') is-invalid @enderror" wire:model.live="lines.{{ $i }}.tax_percent"></td>
                         <td class="text-end">{{ money((float) ($l['quantity'] ?: 0) * (float) ($l['unit_price'] ?: 0) * (1 + (float) ($l['tax_percent'] ?: 0) / 100)) }}</td>
-                        <td><button class="btn btn-sm btn-link text-danger" wire:click="removeLine({{ $i }})"><i class="ri-close-line"></i></button></td>
+                        <td><button class="btn btn-sm btn-link text-danger" wire:click="removeLine({{ $i }})" title="Remove line"><i class="ri-close-line"></i></button></td>
                     </tr>
                 @endforeach
             </tbody>
             <tfoot><tr><td colspan="4"><button class="btn btn-sm btn-light-primary" wire:click="addLine"><i class="ri-add-line"></i> Add line</button></td><th class="text-end">{{ money($poTotal) }}</th><td></td></tr></tfoot>
         </table>
         @error('lines')<div class="text-danger">{{ $message }}</div>@enderror
+        @php $lineErrors = collect($errors->getMessages())->filter(fn ($m, $k) => preg_match('/^lines\.\d+\.(quantity|unit_price|tax_percent)$/', $k))->flatten()->unique(); @endphp
+        @if ($lineErrors->isNotEmpty())<div class="text-danger fs-13 mb-2">{{ $lineErrors->implode(' ') }}</div>@endif
         <x-form.textarea label="Notes" model="form.notes" rows="2" />
         <x-slot:footer>
             <button class="btn btn-light" x-on:click="show = false">Cancel</button>

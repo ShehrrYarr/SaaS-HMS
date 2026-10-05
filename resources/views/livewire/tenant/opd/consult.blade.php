@@ -375,7 +375,7 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
                                 <div class="row g-1">
                                     <div class="col-4"><input type="text" class="form-control form-control-sm" placeholder="Dose" wire:model="items.{{ $i }}.dosage"></div>
                                     <div class="col-5"><select class="form-select form-select-sm" wire:model.live="items.{{ $i }}.frequency">@foreach ($frequencies as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
-                                    <div class="col-3"><div class="input-group input-group-sm"><input type="number" class="form-control" wire:model.live.debounce.500ms="items.{{ $i }}.duration"><span class="input-group-text">d</span></div></div>
+                                    <div class="col-3"><div class="input-group input-group-sm"><input type="number" class="form-control" wire:model.live="items.{{ $i }}.duration"><span class="input-group-text">d</span></div></div>
                                     <div class="col-4"><select class="form-select form-select-sm" wire:model="items.{{ $i }}.route">@foreach (['Oral', 'IV', 'IM', 'SC', 'Topical', 'Inhalation', 'Drops', 'Rectal'] as $r)<option>{{ $r }}</option>@endforeach</select></div>
                                     <div class="col-3"><input type="number" class="form-control form-control-sm" title="Quantity" wire:model="items.{{ $i }}.quantity"></div>
                                     <div class="col-5"><input type="text" class="form-control form-control-sm" placeholder="Instructions" wire:model="items.{{ $i }}.instructions"></div>

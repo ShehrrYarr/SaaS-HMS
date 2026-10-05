@@ -169,7 +169,7 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
                 <tbody>
                     @forelse ($medicines as $m)
                         <tr wire:key="med-{{ $m->id }}" class="{{ $m->is_active ? '' : 'opacity-50' }}">
-                            <td><strong>{{ $m->label }}</strong> @if ($m->requires_prescription)<span class="badge bg-warning-subtle text-warning">Rx</span>@endif<div class="fs-12 text-muted">{{ $m->generic_name }} · {{ $m->manufacturer }} · {{ $m->barcode }}</div></td>
+                            <td><strong>{{ $m->label }}</strong> @if ($m->requires_prescription)<span class="badge bg-warning-subtle text-warning">Rx</span>@endif<div class="fs-12 text-muted">{{ collect([$m->generic_name, $m->manufacturer, $m->barcode])->filter()->implode(' · ') }}</div></td>
                             <td>{{ $m->category?->name ?? '—' }}</td>
                             <td>{{ ucfirst($m->form) }} / {{ $m->unit }}</td>
                             <td>{{ $m->rack_location ?: '—' }}</td>

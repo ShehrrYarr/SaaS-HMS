@@ -156,10 +156,10 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
                                     <tr wire:key="ii-{{ $i }}">
                                         <td><select class="form-select form-select-sm" wire:model="items.{{ $i }}.service_type">@foreach ($types as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></td>
                                         <td><input type="text" class="form-control form-control-sm @error('items.'.$i.'.description') is-invalid @enderror" wire:model="items.{{ $i }}.description"></td>
-                                        <td><input type="number" step="0.5" class="form-control form-control-sm" wire:model.live.debounce.400ms="items.{{ $i }}.quantity"></td>
-                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.unit_price') is-invalid @enderror" wire:model.live.debounce.400ms="items.{{ $i }}.unit_price"></td>
-                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.discount') is-invalid @enderror" wire:model.live.debounce.400ms="items.{{ $i }}.discount"></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="items.{{ $i }}.tax_percent"></td>
+                                        <td><input type="number" step="0.5" class="form-control form-control-sm" wire:model.live="items.{{ $i }}.quantity"></td>
+                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.unit_price') is-invalid @enderror" wire:model.live="items.{{ $i }}.unit_price"></td>
+                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.discount') is-invalid @enderror" wire:model.live="items.{{ $i }}.discount"></td>
+                                        <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live="items.{{ $i }}.tax_percent"></td>
                                         <td class="text-end">{{ money($line + rupees($line * (float) ($item['tax_percent'] ?: 0) / 100)) }}</td>
                                         <td><button class="btn btn-sm btn-link text-danger" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button></td>
                                     </tr>
@@ -179,7 +179,7 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
                 <div class="card-body">
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ money($totals['subtotal']) }}</span></div>
                     <div class="d-flex justify-content-between"><span>Line discounts</span><span>- {{ money($totals['item_discount']) }}</span></div>
-                    <div class="d-flex justify-content-between align-items-center my-1"><span>Invoice discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.400ms="discount"></div>
+                    <div class="d-flex justify-content-between align-items-center my-1"><span>Invoice discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live="discount"></div>
                     <div class="d-flex justify-content-between"><span>{{ hospital()->tax_label }}</span><span>{{ money($totals['tax']) }}</span></div>
                     <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-2 mt-2"><span>Total</span><span>{{ money($totals['total']) }}</span></div>
                     <x-form.input class="mt-3" label="Due date" model="due_date" type="date" />

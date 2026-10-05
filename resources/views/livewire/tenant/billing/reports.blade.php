@@ -139,7 +139,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
 
     <div class="row g-4 mb-4">
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Gross billed" :value="money($kpi['billed'])" icon="ri-file-list-3-line" color="primary" :hint="'Discounts '.money($kpi['discount']).' · '.hospital()->tax_label.' '.money($kpi['tax'])" /></div>
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="Net collections" :value="money($kpi['collected'])" icon="ri-money-rupee-circle-line" color="success" :hint="'Refunds '.money($kpi['refunds'])" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="Net collections" :value="money($kpi['collected'])" icon="ri-money-rupee-circle-line" color="success" :hint="'Applied to bills · refunds '.money($kpi['refunds'])" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Expenses" :value="money($kpi['expenses'])" icon="ri-shopping-bag-line" color="danger" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Net cash flow" :value="money($kpi['net'])" icon="ri-scales-3-line" :color="$kpi['net'] >= 0 ? 'success' : 'danger'" :hint="'Outstanding receivables '.money($kpi['outstanding'])" /></div>
     </div>
@@ -175,7 +175,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
         </div>
         <div class="col-xl-6">
             <div class="card">
-                <div class="card-header"><h6 class="card-title mb-0">Collections by bank / cash account</h6></div>
+                <div class="card-header"><h6 class="card-title mb-0">Collections by bank / cash account</h6><small class="text-muted">Money actually received, including IPD advance deposits not yet applied to a bill, so it can differ from Net collections.</small></div>
                 <div class="card-body" wire:key="meth-{{ $from }}-{{ $to }}">@if ($methodChart)<div x-data="apexChart(@js($methodChart))" wire:ignore></div>@else<p class="text-muted text-center py-4 mb-0">No payments in period.</p>@endif</div>
             </div>
             <div class="card mb-0">

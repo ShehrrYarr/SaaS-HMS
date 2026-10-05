@@ -186,6 +186,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
                         </tbody>
                         <tfoot class="fs-13">
                             <tr><td colspan="6" class="text-end">Subtotal</td><td class="text-end">{{ money($inv->subtotal) }}</td><td></td></tr>
+                            @if (($lineDiscount = $inv->items->sum('discount')) > 0)<tr><td colspan="6" class="text-end">Line discounts</td><td class="text-end">- {{ money($lineDiscount) }}</td><td></td></tr>@endif
                             @if ($inv->discount > 0)<tr><td colspan="6" class="text-end">Invoice discount</td><td class="text-end">- {{ money($inv->discount) }}</td><td></td></tr>@endif
                             <tr><td colspan="6" class="text-end">{{ hospital()->tax_label }}</td><td class="text-end">{{ money($inv->tax) }}</td><td></td></tr>
                             <tr class="fw-bold fs-6"><td colspan="6" class="text-end">Total</td><td class="text-end">{{ money($inv->total) }}</td><td></td></tr>

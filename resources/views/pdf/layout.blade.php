@@ -17,6 +17,7 @@
         .bold { font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .grid th { background: #f3f4f6; text-align: left; padding: 5px 6px; font-size: 9px; border-bottom: 1px solid #d1d5db; }
+        .grid th.right { text-align: right; }
         .grid td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
         .box { border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; }
         .title-bar { background: #0d6efd; color: #fff; padding: 5px 8px; font-weight: bold; font-size: 11px; margin: 10px 0 6px; }

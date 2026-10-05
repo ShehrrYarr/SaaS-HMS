@@ -110,6 +110,7 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
             $ledger->forget($expense);
             $expense->delete();
         });
+        $this->toast('Expense deleted; '.money($expense->amount).' is back in '.($expense->account?->label ?? 'Cash').'.', 'warning');
     }
 
     public function with(): array

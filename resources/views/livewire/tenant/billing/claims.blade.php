@@ -86,7 +86,10 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
         // Mirror the insurer's decision on the invoice and record settlement as an insurance payment.
         if ($c->invoice && $c->invoice->status !== 'cancelled') {
             if (in_array($c->status, ['approved', 'partially_approved', 'settled'])) {
-                $c->invoice->update(['insurance_amount' => 0]);
+                // Until the insurer pays, the approved amount still covers the bill (it was wiped before,
+                // so approval made the patient owe everything); money received becomes a payment below.
+                $stillCovered = $c->status === 'settled' ? 0 : max(0, (int) $c->approved_amount - (int) $c->settled_amount);
+                $c->invoice->update(['insurance_amount' => min($stillCovered, max(0, (int) $c->invoice->total - (int) $c->invoice->paid_amount))]);
                 $c->invoice->recalculate();
                 $delta = $c->settled_amount - $before;
                 $payable = min($delta, max(0, $c->invoice->fresh()->balance));

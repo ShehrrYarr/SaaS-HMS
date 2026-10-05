@@ -58,7 +58,16 @@ trait WithTable
         $allowed = property_exists($this, 'sortable') ? $this->sortable : [$this->sortField];
         $field = in_array($this->sortField, $allowed, true) ? $this->sortField : ($allowed[0] ?? 'id');
 
-        return $query->orderBy($field, $this->sortDirection === 'asc' ? 'asc' : 'desc');
+        $direction = $this->sortDirection === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($field, $direction);
+
+        // Many rows share a date (invoices, expenses), so break ties by record order: newest first when descending.
+        if (! method_exists($query, 'getModel')) {
+            return $query;
+        }
+        $key = $query->getModel()->getQualifiedKeyName();
+
+        return $field === 'id' || $field === $key ? $query : $query->orderBy($key, $direction);
     }
 
     protected function toast(string $message, string $type = 'success'): void

@@ -56,7 +56,8 @@
             <td style="width: 45%; padding-left: 10px;">
                 <table class="totals">
                     <tr><td>Subtotal</td><td class="right">{{ money($invoice->subtotal) }}</td></tr>
-                    @if ($invoice->discount > 0)<tr><td>Discount</td><td class="right">- {{ money($invoice->discount) }}</td></tr>@endif
+                    @if (($lineDiscount = $invoice->items->sum('discount')) > 0)<tr><td>Line discounts</td><td class="right">- {{ money($lineDiscount) }}</td></tr>@endif
+                    @if ($invoice->discount > 0)<tr><td>Invoice discount</td><td class="right">- {{ money($invoice->discount) }}</td></tr>@endif
                     <tr><td>{{ $hospital->tax_label }}</td><td class="right">{{ money($invoice->tax) }}</td></tr>
                     <tr style="border-top: 1px solid #111;"><td class="bold">Total</td><td class="right bold">{{ money($invoice->total) }}</td></tr>
                     @if ($invoice->insurance_amount > 0)<tr><td>Insurance</td><td class="right">- {{ money($invoice->insurance_amount) }}</td></tr>@endif

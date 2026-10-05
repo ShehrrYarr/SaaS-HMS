@@ -85,7 +85,7 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
         $this->authorize('hr.staff');
         $data = $this->validate([
             'form.name' => 'required|string|max:120',
-            'form.email' => 'nullable|email|max:150',
+            'form.email' => ['nullable', 'email', 'max:150', tenant_unique('staff', 'email', $this->editingId)],
             'form.phone' => 'nullable|string|max:30',
             'form.gender' => 'nullable|in:male,female,other',
             'form.date_of_birth' => 'nullable|date|before:today',

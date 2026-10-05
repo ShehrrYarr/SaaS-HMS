@@ -13,8 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Monthly payroll: basic + allowances + doctor commissions − fixed deductions − absence deduction.
- * Working days exclude Sundays. If no attendance was recorded for a staff member in the month,
- * no absence deduction is applied (attendance is optional).
+ * Working days exclude Sundays. Only recorded absences are deducted (absent = 1 day, half day = ½):
+ * a day nobody marked is not treated as absent, so a payroll run mid-month or with partial
+ * attendance doesn't dock weeks of pay.
  */
 class PayrollService
 {
@@ -35,11 +36,9 @@ class PayrollService
                 }
 
                 $attendance = Attendance::where('staff_id', $staff->id)->whereBetween('date', [$start->toDateString(), $end->toDateString()])->get();
-                $present = $attendance->isEmpty()
-                    ? $workingDays
-                    : $attendance->whereIn('status', ['present', 'late', 'leave', 'holiday'])->count() + 0.5 * $attendance->where('status', 'half_day')->count();
-                $absentDays = max(0, $workingDays - $present);
-                $absenceDeduction = $attendance->isEmpty() ? 0 : rupees($staff->basic_salary / max(1, $workingDays) * $absentDays);
+                $absentDays = min($workingDays, $attendance->where('status', 'absent')->count() + 0.5 * $attendance->where('status', 'half_day')->count());
+                $present = $workingDays - $absentDays;
+                $absenceDeduction = rupees($staff->basic_salary / max(1, $workingDays) * $absentDays);
 
                 $commissions = DoctorCommission::where('staff_id', $staff->id)->where('status', 'pending')
                     ->where(fn ($q) => $q->whereNull('payroll_id')->orWhere('payroll_id', $existing?->id))

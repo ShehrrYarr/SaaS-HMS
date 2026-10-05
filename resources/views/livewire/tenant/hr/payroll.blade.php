@@ -36,7 +36,8 @@ new #[Layout('layouts.app')] #[Title('Payroll')] class extends Component
     public function approve(int $id, PayrollService $payroll): void
     {
         $this->authorize('hr.payroll');
-        $payroll->approve(Payroll::findOrFail($id));
+        $payroll->approve($p = Payroll::with('staff')->findOrFail($id));
+        $this->toast("Payroll approved for {$p->staff?->name}.");
     }
 
     public function approveAll(PayrollService $payroll): void

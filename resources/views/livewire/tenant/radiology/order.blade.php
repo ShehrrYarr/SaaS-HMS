@@ -5,6 +5,7 @@ use App\Models\Hospital;
 use App\Models\RadiologyOrder;
 use App\Notifications\HmsNotification;
 use Illuminate\Support\Facades\Storage;
+use App\Services\DiagnosticsService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -60,7 +61,8 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
         $this->toast('Study marked as performed.');
     }
 
-    public function upload(): void
+    // Not "upload": $wire.upload() is Livewire's own file-upload helper, so wire:click="upload" never reached PHP.
+    public function uploadFiles(): void
     {
         $this->authorize('radiology.perform');
         $this->validate(['files' => 'required|array|min:1', 'files.*' => 'file|max:102400']);
@@ -92,6 +94,11 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
     public function saveReport(bool $final = false): void
     {
         $this->authorize('radiology.report');
+        if (in_array($this->radiologyOrder->status, ['approved', 'cancelled'], true)) {
+            $this->toast('This report is already finalised and released, so it can no longer be changed.', 'error');
+
+            return;
+        }
         $this->validate(['findings' => 'required|string|max:10000', 'impression' => 'required|string|max:3000']);
         $this->radiologyOrder->update([
             'findings' => $this->findings,
@@ -115,7 +122,8 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
         abort_unless(auth()->user()->canAny(['radiology.order', 'radiology.perform']), 403);
         abort_unless(in_array($this->radiologyOrder->status, ['ordered', 'scheduled']), 422);
         $this->radiologyOrder->update(['status' => 'cancelled']);
-        $this->toast('Order cancelled.', 'warning');
+        $note = app(DiagnosticsService::class)->unbill($this->radiologyOrder, 'Imaging: '.$this->radiologyOrder->test->name);
+        $this->toast($note ?? 'Order cancelled and taken off the bill.', 'warning');
     }
 
     public function with(): array
@@ -180,9 +188,10 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
                     @can('radiology.perform')
                         <div class="d-flex gap-2 mb-3">
                             <input type="file" class="form-control @error('files.*') is-invalid @enderror" wire:model="files" multiple accept=".dcm,image/*,application/pdf,application/dicom">
-                            <button class="btn btn-primary" wire:click="upload" wire:loading.attr="disabled"><i class="ri-upload-2-line"></i></button>
+                            <button class="btn btn-primary text-nowrap" wire:click="uploadFiles" wire:loading.attr="disabled"><i class="ri-upload-2-line me-1"></i>Upload</button>
                         </div>
                         <div wire:loading wire:target="files" class="fs-12 text-primary mb-2">Uploading…</div>
+                        @error('files')<div class="text-danger fs-12 mb-2">Choose at least one image or DICOM file first.</div>@enderror
                         @error('files.*')<div class="text-danger fs-12 mb-2">{{ $message }}</div>@enderror
                     @endcan
                     <div class="row g-2">

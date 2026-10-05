@@ -64,12 +64,26 @@ class LabTestParameter extends Model
         return rtrim(rtrim(number_format($min, 3), '0'), '.').' - '.rtrim(rtrim(number_format($max, 3), '0'), '.');
     }
 
+    /** A numeric result as entered: "13.5", "<0.5" or ">1000"; null when it isn't one. */
+    public static function numericValue(?string $value): ?float
+    {
+        $value = trim((string) $value);
+
+        return preg_match('/^(?:[<>]=?\s*)?(-?(?:\d+(?:\.\d+)?|\.\d+))$/', $value, $m) ? (float) $m[1] : null;
+    }
+
     public function flagFor(?string $value, ?string $gender): ?string
     {
-        if ($value === null || $value === '' || $this->result_type !== 'numeric' || ! is_numeric($value)) {
-            return $value === null || $value === '' ? null : 'normal';
+        if ($value === null || trim($value) === '') {
+            return null;
         }
-        $v = (float) $value;
+        if ($this->result_type !== 'numeric') {
+            return 'normal';
+        }
+        // Never call an unreadable result normal ("6,5" would otherwise hide a critical Hb).
+        if (($v = static::numericValue($value)) === null) {
+            return null;
+        }
         if ($this->critical_low !== null && $v <= $this->critical_low) {
             return 'critical_low';
         }

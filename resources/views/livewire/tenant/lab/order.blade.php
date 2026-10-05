@@ -3,6 +3,7 @@
 use App\Livewire\Concerns\Toasts;
 use App\Models\LabOrder;
 use App\Models\LabOrderItem;
+use App\Models\LabTestParameter;
 use App\Services\DiagnosticsService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -57,7 +58,16 @@ new #[Layout('layouts.app')] #[Title('Lab Order')] class extends Component
     {
         $this->authorize('lab.enter_results');
         $this->validate(['values.*' => 'nullable|string|max:100', 'remarks' => 'nullable|string|max:1000']);
-        $item = $this->labOrder->items()->findOrFail($this->editing);
+        $item = $this->labOrder->items()->with('test.parameters')->findOrFail($this->editing);
+        foreach ($item->test->parameters->where('result_type', 'numeric') as $p) {
+            $value = trim((string) ($this->values[$p->id] ?? ''));
+            if ($value !== '' && LabTestParameter::numericValue($value) === null) {
+                $this->addError('values.'.$p->id, "{$p->name}: enter a plain number such as 13.5 (dot for decimals, no commas or units).");
+            }
+        }
+        if ($this->getErrorBag()->isNotEmpty()) {
+            return;
+        }
         if ($complete && collect($this->values)->filter(fn ($v) => $v !== '' && $v !== null)->isEmpty()) {
             $this->addError('values', 'Enter at least one result.');
 
@@ -84,18 +94,20 @@ new #[Layout('layouts.app')] #[Title('Lab Order')] class extends Component
         $this->toast('All results approved – report released.');
     }
 
-    public function cancelItem(int $itemId): void
+    public function cancelItem(int $itemId, DiagnosticsService $d): void
     {
         abort_unless(auth()->user()->canAny(['lab.order', 'lab.enter_results']), 403);
-        $item = $this->labOrder->items()->whereIn('status', ['pending', 'collected'])->findOrFail($itemId);
+        $item = $this->labOrder->items()->with('test')->whereIn('status', ['pending', 'collected'])->findOrFail($itemId);
         $item->update(['status' => 'cancelled']);
         $this->labOrder->refreshStatus();
-        $this->toast('Test cancelled.', 'warning');
+        $note = $d->unbill($this->labOrder, 'Lab: '.$item->test->name);
+        $this->toast($note ?? "{$item->test->name} cancelled and taken off the bill.", 'warning');
     }
 
     public function with(): array
     {
-        $order = $this->labOrder->load(['patient', 'doctor', 'orderedBy', 'approver', 'items.test.parameters', 'items.results', 'items.collector', 'items.enteredBy', 'items.approver', 'items.device']);
+        // refresh(): actions change the order's own status (collected, approved) in the service.
+        $order = $this->labOrder->refresh()->load(['patient', 'doctor', 'orderedBy', 'approver', 'items.test.parameters', 'items.results', 'items.collector', 'items.enteredBy', 'items.approver', 'items.device']);
         $editingItem = $this->editing ? $order->items->firstWhere('id', $this->editing) : null;
         $flags = [];
         if ($editingItem) {
@@ -177,7 +189,8 @@ new #[Layout('layouts.app')] #[Title('Lab Order')] class extends Component
                                         @if ($p->result_type === 'option')
                                             <select class="form-select form-select-sm" wire:model.live="values.{{ $p->id }}"><option value="">—</option>@foreach ($p->options ?? [] as $opt)<option>{{ $opt }}</option>@endforeach</select>
                                         @else
-                                            <input type="{{ $p->result_type === 'numeric' ? 'text' : 'text' }}" inputmode="{{ $p->result_type === 'numeric' ? 'decimal' : 'text' }}" class="form-control form-control-sm" wire:model.live="values.{{ $p->id }}">
+                                            <input type="text" inputmode="{{ $p->result_type === 'numeric' ? 'decimal' : 'text' }}" class="form-control form-control-sm @error('values.'.$p->id) is-invalid @enderror" wire:model.live="values.{{ $p->id }}">
+                                            @error('values.'.$p->id)<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         @endif
                                     </td>
                                     <td class="text-muted">{{ $p->unit }}</td>

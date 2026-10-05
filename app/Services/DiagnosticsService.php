@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\InvoiceItem;
 use App\Models\IpdAdmission;
+use App\Models\IpdCharge;
 use App\Models\LabDevice;
 use App\Models\LabOrder;
 use App\Models\LabOrderItem;
@@ -184,6 +186,37 @@ class DiagnosticsService
         }
 
         return $parameter->flagFor($value === null ? null : (string) $value, $gender);
+    }
+
+    /**
+     * Take a cancelled test off what the patient owes. Returns a note for staff when the test
+     * was already paid (or billed at discharge) and has to be refunded from the bill instead.
+     */
+    public function unbill(Model $order, string $description): ?string
+    {
+        $source = fn ($q) => $q->where('source_type', $order->getMorphClass())->where('source_id', $order->getKey())->where('description', $description);
+
+        $charge = IpdCharge::where($source)->first();
+        if ($charge && ! $charge->billed) {
+            $charge->delete();
+
+            return null;
+        }
+        $item = InvoiceItem::where($source)->with('invoice')->first();
+        $invoice = $item?->invoice;
+        if (! $invoice || $invoice->status === 'cancelled') {
+            return $charge ? "{$description} is already on the final IPD bill; adjust that bill instead." : null;
+        }
+        if ($invoice->paid_amount > $invoice->total - $item->total) {
+            return "{$description} was already paid on {$invoice->invoice_no}; refund ".money($item->total).' from that invoice.';
+        }
+        if ($invoice->items()->count() === 1) {
+            $this->billing->cancel($invoice, 'Test cancelled');
+        } else {
+            $this->billing->removeItem($item);
+        }
+
+        return null;
     }
 
     /** IPD patients accumulate charges on the admission; others get an invoice. */

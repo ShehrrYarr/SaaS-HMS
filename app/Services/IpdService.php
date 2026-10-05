@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Bed;
 use App\Models\BedAllocation;
 use App\Models\Invoice;
@@ -177,6 +180,24 @@ class IpdService
             $admission->bed?->update(['status' => 'cleaning']);
 
             return $invoice;
+        });
+    }
+
+    /** Pay back the part of the advance deposit the final bill didn't use. */
+    public function refundDeposit(IpdAdmission $admission, BankAccount|int|string $account): BankTransaction
+    {
+        return DB::transaction(function () use ($admission, $account) {
+            $admission = IpdAdmission::with(['invoice', 'patient'])->lockForUpdate()->findOrFail($admission->id);
+            $due = $admission->depositRefundDue();
+            if ($due <= 0) {
+                throw ValidationException::withMessages(['refund' => 'Nothing is due back on this deposit.']);
+            }
+
+            $line = $this->ledger->moneyOut($account, $due, 'refund', $admission, "Deposit refund · {$admission->admission_no} · {$admission->patient->full_name}");
+            $admission->increment('deposit_refunded', $due);
+            AuditLog::record('deposit_refund', $admission, [], ['amount' => $due, 'bank_account_id' => $line->bank_account_id], 'Refunded the unused admission deposit');
+
+            return $line;
         });
     }
 

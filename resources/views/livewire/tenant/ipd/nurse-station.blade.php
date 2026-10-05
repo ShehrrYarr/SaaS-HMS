@@ -26,7 +26,8 @@ new #[Layout('layouts.app')] #[Title('Nurse Station')] class extends Component
     #[On('vitals-saved')]
     public function refreshAfterVitals(): void
     {
-        // re-render to update alerts
+        // Close the form so the nurse can move to the next bed; the re-render updates the alerts.
+        $this->showVitals = false;
     }
 
     public function with(): array

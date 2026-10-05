@@ -134,7 +134,7 @@ class DemoHospitalSeeder extends Seeder
         }
 
         foreach ([['Global Health Insurance', 'GHI'], ['MediCare Plus TPA', 'MCP'], ['SafeLife Assurance', 'SLA']] as [$n, $c]) {
-            Tpa::create(['name' => $n, 'code' => $c, 'contact_person' => 'Claims Desk', 'phone' => '+1 555 02'.random_int(10, 99), 'email' => strtolower($c).'@tpa.test']);
+            Tpa::create(['name' => $n, 'code' => $c, 'contact_person' => 'Claims Desk', 'phone' => '+92 42 3570 02'.random_int(10, 99), 'email' => strtolower($c).'@tpa.test']);
         }
 
         foreach ([
@@ -162,7 +162,7 @@ class DemoHospitalSeeder extends Seeder
         // ---------------------------------------------------------- pharmacy
         $suppliers = collect([
             ['PharmaDistributors Inc.', 'John Carter'], ['MedSupply Co.', 'Nina Patel'], ['HealthLine Wholesale', 'Omar Farooq'],
-        ])->map(fn ($s) => Supplier::create(['name' => $s[0], 'contact_person' => $s[1], 'phone' => '+1 555 03'.random_int(10, 99), 'email' => Str::slug($s[0]).'@supplier.test']));
+        ])->map(fn ($s) => Supplier::create(['name' => $s[0], 'contact_person' => $s[1], 'phone' => '+92 42 3570 03'.random_int(10, 99), 'email' => Str::slug($s[0]).'@supplier.test']));
 
         $categories = collect(['Analgesics', 'Antibiotics', 'Antihypertensives', 'Antidiabetics', 'Antacids & GI', 'Vitamins & Supplements', 'Respiratory', 'IV Fluids'])
             ->mapWithKeys(fn ($n) => [$n => MedicineCategory::create(['name' => $n])->id]);
@@ -232,7 +232,7 @@ class DemoHospitalSeeder extends Seeder
             $group = $groups[$i % 8];
             $donor = BloodDonor::create([
                 'donor_no' => Sequence::code('donor', 'DNR', 4), 'name' => fake()->name(), 'gender' => $i % 3 ? 'male' : 'female',
-                'date_of_birth' => now()->subYears(random_int(20, 50))->toDateString(), 'blood_group' => $group, 'phone' => fake()->numerify('+1 555 1#####'),
+                'date_of_birth' => now()->subYears(random_int(20, 50))->toDateString(), 'blood_group' => $group, 'phone' => fake()->numerify('+92 31# #######'),
                 'weight' => random_int(55, 90), 'last_donation_date' => now()->subDays(random_int(5, 60))->toDateString(),
             ]);
             BloodBag::create([
@@ -256,7 +256,7 @@ class DemoHospitalSeeder extends Seeder
                 'date_of_birth' => now()->subYears(random_int(2, 80))->subDays(random_int(0, 360))->toDateString(),
                 'blood_group' => $groups[array_rand($groups)], 'phone' => '+92300'.str_pad((string) (2000000 + $i), 7, '0', STR_PAD_LEFT),
                 'email' => null, 'address' => fake()->streetAddress(), 'city' => 'Lahore', 'country' => 'Pakistan',
-                'emergency_contact_name' => fake()->name(), 'emergency_contact_phone' => fake()->numerify('+1 555 3######'), 'emergency_contact_relation' => 'Spouse',
+                'emergency_contact_name' => fake()->name(), 'emergency_contact_phone' => fake()->numerify('+92 33# #######'), 'emergency_contact_relation' => 'Spouse',
                 'tpa_id' => $i % 4 === 0 ? $tpa->id : null, 'insurance_policy_no' => $i % 4 === 0 ? 'POL-'.random_int(100000, 999999) : null,
                 'registration_type' => $i % 3 ? 'full' : 'quick', 'registered_by' => $receptionist?->id,
                 'created_at' => now()->subDays(random_int(0, 120)),
@@ -298,7 +298,7 @@ class DemoHospitalSeeder extends Seeder
     {
         $user = null;
         if ($email) {
-            $user = new User(['name' => $name, 'email' => $email, 'password' => 'password', 'phone' => fake()->numerify('+1 555 4######')]);
+            $user = new User(['name' => $name, 'email' => $email, 'password' => 'password', 'phone' => fake()->numerify('+92 32# #######')]);
             $user->hospital_id = tenancy()->id();
             $user->email_verified_at = now();
             $user->save();
@@ -312,7 +312,7 @@ class DemoHospitalSeeder extends Seeder
             'employee_code' => Sequence::code('employee', 'EMP', 4),
             'name' => $name,
             'email' => $email,
-            'phone' => $user?->phone ?? fake()->numerify('+1 555 4######'),
+            'phone' => $user?->phone ?? fake()->numerify('+92 32# #######'),
             'gender' => in_array(explode(' ', $name)[0], ['Sarah', 'Emily', 'Grace', 'Olivia', 'Aisha', 'Linda']) ? 'female' : 'male',
             'joining_date' => now()->subMonths(random_int(3, 48))->toDateString(),
             'allowances' => 10000,

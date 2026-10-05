@@ -13,6 +13,7 @@ use App\Models\OpdVisit;
 use App\Models\User;
 use App\Support\FriendlyValidator;
 use App\Support\Livewire\SubdirectoryHandleRequests;
+use App\Support\Livewire\SurfaceServiceErrors;
 use App\Support\Permissions;
 use App\Support\Tenancy;
 use Illuminate\Auth\Events\Failed;
@@ -36,6 +37,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Sub-directory deployments (/hms): Livewire's update endpoint must include the base path.
         $this->app->instance(HandleRequests::class, new SubdirectoryHandleRequests);
+
+        // Registered before Livewire boots its features, which is when hooks get wired up.
+        Livewire::componentHook(SurfaceServiceErrors::class);
     }
 
     public function boot(): void

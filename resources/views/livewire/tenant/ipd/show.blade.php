@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Concerns\Toasts;
+use App\Models\BankAccount;
 use App\Models\Bed;
 use App\Models\IpdAdmission;
 use App\Models\LabTest;
@@ -38,9 +39,12 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
 
     public array $imaging = [];
 
+    public string $refundAccount = '';
+
     public function mount(IpdAdmission $admission): void
     {
         $this->admission = $admission;
+        $this->refundAccount = (string) BankAccount::cash()->id;
     }
 
     public function updatedChargeService($id): void
@@ -62,7 +66,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
             'charge.unit_price' => 'required|integer|min:0',
             'charge.doctor_id' => ['nullable', tenant_exists('staff')],
         ]);
-        $ipd->addCharge($this->admission, $this->charge + ['doctor_id' => $this->charge['doctor_id'] ?: null]);
+        $ipd->addCharge($this->admission, array_merge($this->charge, ['doctor_id' => $this->charge['doctor_id'] ?: null]));
         $this->charge = ['service' => '', 'category' => 'procedure', 'description' => '', 'quantity' => 1, 'unit_price' => '', 'doctor_id' => ''];
         $this->toast('Charge added.');
     }
@@ -111,12 +115,22 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
             'discharge.discharge_condition' => 'nullable|string|max:2000',
             'discharge.discharge_instructions' => 'nullable|string|max:5000',
             'discharge.follow_up_date' => 'nullable|date|after:today',
-        ], [], ['discharge.discharge_summary' => 'discharge summary'])['discharge'];
+        ], [], ['discharge.discharge_summary' => 'discharge summary', 'discharge.follow_up_date' => 'follow-up date'])['discharge'];
 
         $invoice = $ipd->discharge($this->admission, array_map(fn ($v) => $v === '' ? null : $v, $data));
         $this->admission->refresh();
         $this->tab = 'overview';
-        $this->toast("Discharged. Final bill {$invoice->invoice_no}: ".money($invoice->total));
+        $due = $this->admission->depositRefundDue();
+        $this->toast("Discharged. Final bill {$invoice->invoice_no}: ".money($invoice->total).($due ? '. Refund due to the patient: '.money($due).'.' : ''));
+    }
+
+    public function refundDeposit(IpdService $ipd): void
+    {
+        $this->authorize('billing.cancel');
+        $this->validate(['refundAccount' => ['required', bank_account_exists()]], [], ['refundAccount' => 'account']);
+        $line = $ipd->refundDeposit($this->admission, $this->refundAccount);
+        $this->admission->refresh();
+        $this->toast('Refunded '.money($line->amount).' of the deposit to '.$this->admission->patient->full_name.'.');
     }
 
     public function with(): array
@@ -157,7 +171,13 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
     <div class="row g-4 mb-4">
         <div class="col-md-3"><x-stat-card title="Bed" :value="$a->bed?->label ?? '—'" icon="ri-hotel-bed-line" color="warning" :hint="$a->bed ? money($a->bed->dailyCharge()).' / day' : null" /></div>
         <div class="col-md-3"><x-stat-card title="Length of stay" :value="$a->lengthOfStay().' day(s)'" icon="ri-calendar-line" color="info" :hint="'Since '.fmt_datetime($a->admitted_at)" /></div>
-        <div class="col-md-3"><x-stat-card title="Running bill" :value="money($bedTotal + $chargeTotal)" icon="ri-bill-line" color="primary" :hint="'Deposit: '.money($a->deposit_amount)" /></div>
+        <div class="col-md-3">
+            @if (! $open && $a->invoice)
+                <x-stat-card title="Final bill" :value="money($a->invoice->total)" icon="ri-bill-line" color="primary" :hint="label($a->invoice->status).' · deposit '.money($a->deposit_amount)" />
+            @else
+                <x-stat-card title="Running bill" :value="money($bedTotal + $chargeTotal)" icon="ri-bill-line" color="primary" :hint="'Before tax · deposit '.money($a->deposit_amount)" />
+            @endif
+        </div>
         <div class="col-md-3"><x-stat-card title="Attending" :value="$a->doctor->display_name" icon="ri-stethoscope-line" color="success" :hint="$a->tpa?->name ?? 'Self-pay'" /></div>
     </div>
 
@@ -219,6 +239,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                         <div class="border rounded p-2 mb-2" style="max-height: 180px; overflow-y: auto;">
                                             @foreach ($labCatalog as $t)<div class="form-check"><input class="form-check-input" type="checkbox" id="ilt{{ $t->id }}" value="{{ $t->id }}" wire:model="labTests"><label class="form-check-label fs-13" for="ilt{{ $t->id }}">{{ $t->name }}</label></div>@endforeach
                                         </div>
+                                        @error('labTests')<div class="text-danger fs-12 mb-2">Tick at least one test.</div>@enderror
                                         <button class="btn btn-sm btn-info" wire:click="orderLab">Send to lab</button>
                                     </div>
                                 @endcan
@@ -230,6 +251,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                         <div class="border rounded p-2 mb-2" style="max-height: 180px; overflow-y: auto;">
                                             @foreach ($imagingCatalog as $t)<div class="form-check"><input class="form-check-input" type="checkbox" id="irt{{ $t->id }}" value="{{ $t->id }}" wire:model="imaging"><label class="form-check-label fs-13" for="irt{{ $t->id }}">{{ $t->name }}</label></div>@endforeach
                                         </div>
+                                        @error('imaging')<div class="text-danger fs-12 mb-2">Tick at least one study.</div>@enderror
                                         <button class="btn btn-sm btn-info" wire:click="orderImaging">Send to radiology</button>
                                     </div>
                                 @endcan
@@ -243,7 +265,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                 @case('beds')
                     <ul class="list-group">
                         @foreach ($a->allocations->sortByDesc('from_at') as $al)
-                            <li class="list-group-item d-flex justify-content-between"><span><strong>{{ $al->bed->label }}</strong> · {{ label($al->reason) }}</span><span class="text-muted fs-13">{{ fmt_datetime($al->from_at) }} → {{ $al->to_at ? fmt_datetime($al->to_at) : 'current' }} · {{ money($al->charge_per_day) }}/day</span></li>
+                            <li class="list-group-item d-flex justify-content-between"><span><strong>{{ $al->bed->label }}</strong> · {{ in_array($al->reason, ['admission', 'transfer'], true) ? label($al->reason) : $al->reason }}</span><span class="text-muted fs-13">{{ fmt_datetime($al->from_at) }} → {{ $al->to_at ? fmt_datetime($al->to_at) : 'current' }} · {{ money($al->charge_per_day) }}/day</span></li>
                         @endforeach
                     </ul>
                     @break
@@ -279,6 +301,20 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                     <h6>Discharged {{ fmt_datetime($a->discharged_at) }} · {{ label($a->discharge_type) }}</h6>
                                     <p class="fs-13 mb-2">{!! nl2br(e($a->discharge_summary)) !!}</p>
                                     @if ($a->invoice)<p class="mb-0">Final bill <a href="{{ route('tenant.billing.show', $a->invoice) }}" wire:navigate>{{ $a->invoice->invoice_no }}</a> · {{ money($a->invoice->total) }} <x-status :value="$a->invoice->status" /></p>@endif
+                                    @if ($a->deposit_amount > 0)
+                                        <p class="fs-13 text-muted mb-0 mt-1">Deposit {{ money($a->deposit_amount) }} · used for the bill {{ money($a->depositUsed()) }}@if ($a->deposit_refunded) · refunded {{ money($a->deposit_refunded) }}@endif</p>
+                                    @endif
+                                    @if ($refundDue = $a->depositRefundDue())
+                                        <div class="alert alert-warning py-2 mt-2 mb-0">
+                                            <div class="mb-2"><i class="ri-refund-2-line me-1"></i>Refund due to the patient: <strong>{{ money($refundDue) }}</strong></div>
+                                            @can('billing.cancel')
+                                                <div class="d-flex flex-wrap align-items-end gap-2">
+                                                    <x-form.account class="mb-0" label="Pay from" model="refundAccount" />
+                                                    <button class="btn btn-sm btn-warning" x-on:click="$confirm('Pay {{ money($refundDue) }} back to {{ addslashes($a->patient->full_name) }}?', () => $wire.refundDeposit(), { color: 'warning', confirmText: 'Refund' })"><i class="ri-refund-2-line me-1"></i>Refund {{ money($refundDue) }}</button>
+                                                </div>
+                                            @endcan
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 <div class="border rounded p-3">
@@ -287,6 +323,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                     <div class="d-flex justify-content-between"><span>Services, medicines &amp; investigations</span><span>{{ money($chargeTotal) }}</span></div>
                                     <div class="d-flex justify-content-between"><span>Advance deposit</span><span>- {{ money($a->deposit_amount) }}</span></div>
                                     <hr class="my-2"><div class="d-flex justify-content-between fw-semibold"><span>Estimated due</span><span>{{ money(max(0, $bedTotal + $chargeTotal - $a->deposit_amount)) }}</span></div>
+                                    <div class="fs-12 text-muted mt-1">Before tax; tax is added on the final bill.</div>
                                 </div>
                             @endif
                         </div>

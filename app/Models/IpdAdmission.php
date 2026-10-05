@@ -23,6 +23,7 @@ class IpdAdmission extends Model
             'expected_discharge_date' => 'date',
             'follow_up_date' => 'date',
             'deposit_amount' => 'integer',
+            'deposit_refunded' => 'integer',
         ];
     }
 
@@ -129,5 +130,21 @@ class IpdAdmission extends Model
     public function depositAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class, 'deposit_account_id');
+    }
+
+    /** Deposit the final bill used to settle itself. */
+    public function depositUsed(): int
+    {
+        return (int) ($this->invoice?->payments()->where('method', 'deposit')->where('is_refund', false)->sum('amount') ?? 0);
+    }
+
+    /** Deposit left after discharge that the hospital still owes the patient. */
+    public function depositRefundDue(): int
+    {
+        if ($this->status !== 'discharged' || $this->deposit_amount <= 0) {
+            return 0;
+        }
+
+        return max(0, $this->deposit_amount - $this->depositUsed() - $this->deposit_refunded);
     }
 }

@@ -81,7 +81,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
         if ($data['status'] === 'settled' && ! $data['settled_at']) {
             $data['settled_at'] = today()->toDateString();
         }
-        $c->update($data + ['approved_amount' => $data['approved_amount'] ?? 0, 'settled_amount' => $data['settled_amount'] ?? 0]);
+        $c->update(array_merge($data, ['approved_amount' => $data['approved_amount'] ?? 0, 'settled_amount' => $data['settled_amount'] ?? 0]));
 
         // Mirror the insurer's decision on the invoice and record settlement as an insurance payment.
         if ($c->invoice && $c->invoice->status !== 'cancelled') {

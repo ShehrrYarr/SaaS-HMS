@@ -9,7 +9,8 @@
     $id = $id ?? 'f_'.str_replace(['.', '-'], '_', $model);
     $items = collect($options)->map(fn ($text, $value) => ['value' => (string) $value, 'label' => (string) $text])->values();
 @endphp
-<div {{ $attributes->only('class')->merge(['class' => 'mb-3']) }}
+{{-- Alpine reads the options once, so a changed list gets a new key and a fresh dropdown. --}}
+<div {{ $attributes->only('class')->merge(['class' => 'mb-3']) }} wire:key="ss-{{ $id }}-{{ md5($items->toJson()) }}"
     x-data="{
         open: false, query: '', highlighted: 0, loading: false,
         items: @js($items),

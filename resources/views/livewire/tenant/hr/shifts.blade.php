@@ -49,6 +49,7 @@ new #[Layout('layouts.app')] #[Title('Shifts & Roster')] class extends Component
         $s = Shift::findOrFail($id);
         $this->editingId = $id;
         $this->shift = ['name' => $s->name, 'start_time' => substr($s->start_time, 0, 5), 'end_time' => substr($s->end_time, 0, 5), 'grace_minutes' => $s->grace_minutes, 'color' => $s->color];
+        $this->resetValidation();
         $this->showShift = true;
     }
 

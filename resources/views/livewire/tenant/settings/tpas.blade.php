@@ -33,6 +33,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Companies')] class extends Compo
     {
         $this->editingId = $id;
         $this->form = collect(Tpa::findOrFail($id)->only(['name', 'code', 'contact_person', 'phone', 'email', 'address', 'is_active']))->map(fn ($v) => is_bool($v) ? $v : (string) $v)->all();
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -40,8 +41,8 @@ new #[Layout('layouts.app')] #[Title('Insurance Companies')] class extends Compo
     {
         abort_unless(auth()->user()->canAny(['insurance.manage', 'settings.manage']), 403);
         $data = $this->validate([
-            'form.name' => 'required|string|max:150',
-            'form.code' => 'nullable|string|max:20',
+            'form.name' => ['required', 'string', 'max:150', tenant_unique('tpas', 'name', $this->editingId)],
+            'form.code' => ['nullable', 'string', 'max:20', tenant_unique('tpas', 'code', $this->editingId)],
             'form.contact_person' => 'nullable|string|max:100',
             'form.phone' => 'nullable|string|max:30',
             'form.email' => 'nullable|email',

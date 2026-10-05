@@ -34,6 +34,7 @@ new #[Layout('layouts.app')] #[Title('Suppliers')] class extends Component
     {
         $this->editingId = $id;
         $this->form = Supplier::findOrFail($id)->only(['name', 'contact_person', 'phone', 'email', 'address', 'tax_no', 'is_active']);
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -41,7 +42,7 @@ new #[Layout('layouts.app')] #[Title('Suppliers')] class extends Component
     {
         $this->authorize('pharmacy.purchase');
         $data = $this->validate([
-            'form.name' => 'required|string|max:150',
+            'form.name' => ['required', 'string', 'max:150', tenant_unique('suppliers', 'name', $this->editingId)],
             'form.contact_person' => 'nullable|string|max:100',
             'form.phone' => 'nullable|string|max:30',
             'form.email' => 'nullable|email',

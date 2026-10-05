@@ -64,6 +64,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     {
         $this->authorize('billing.create');
         $this->item = ['service_id' => '', 'service_type' => 'service', 'description' => '', 'quantity' => 1, 'unit_price' => '', 'discount' => 0, 'tax_percent' => (string) hospital()->tax_rate];
+        $this->resetValidation();
         $this->showItem = true;
     }
 

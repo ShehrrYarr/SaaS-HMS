@@ -138,6 +138,40 @@ if (! function_exists('tenant_exists')) {
     }
 }
 
+if (! function_exists('normalize_phone')) {
+    /**
+     * One format for Pakistani mobiles so look-ups (OTP sign-in, duplicates) match however the
+     * number was typed: "0300 1234567", "3001234567", "0092 300…" and "+92 300…" -> "+923001234567".
+     * Landlines and foreign numbers are kept as typed.
+     */
+    function normalize_phone(?string $phone): ?string
+    {
+        $phone = trim((string) $phone);
+        if ($phone === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $phone);
+        if (str_starts_with($digits, '0092')) {
+            $digits = substr($digits, 2);
+        }
+
+        return match (true) {
+            strlen($digits) === 11 && str_starts_with($digits, '03') => '+92'.substr($digits, 1),
+            strlen($digits) === 10 && str_starts_with($digits, '3') => '+92'.$digits,
+            strlen($digits) === 12 && str_starts_with($digits, '923') => '+'.$digits,
+            default => $phone,
+        };
+    }
+}
+
+if (! function_exists('tenant_unique')) {
+    /** Validation rule: value not used yet in this table for the current hospital (ignoring the record being edited). */
+    function tenant_unique(string $table, string $column, ?int $ignoreId = null): \Illuminate\Validation\Rules\Unique
+    {
+        return \Illuminate\Validation\Rule::unique($table, $column)->where('hospital_id', tenancy()->id() ?? 0)->ignore($ignoreId);
+    }
+}
+
 if (! function_exists('bank_account_exists')) {
     /** Validation rule: an active bank / cash account of the current hospital. */
     function bank_account_exists(): \Illuminate\Validation\Rules\Exists

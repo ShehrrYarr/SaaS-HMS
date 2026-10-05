@@ -57,7 +57,12 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
             'form.uhid_prefix' => 'nullable|alpha_num|max:10',
             'settings.invoice_footer' => 'nullable|string|max:255',
             'settings.report_footer' => 'nullable|string|max:255',
-            'settings.pacs_viewer_url' => 'nullable|url|max:255',
+            'settings.pacs_viewer_url' => ['nullable', 'string', 'max:255', function ($attribute, $value, $fail) {
+                // {uid} is a placeholder for the study id, so check the address with a sample id in it.
+                if (! filter_var(str_replace('{uid}', '1.2.840.0', $value), FILTER_VALIDATE_URL)) {
+                    $fail('The PACS viewer URL must be a web address (use {uid} where the study ID goes).');
+                }
+            }],
             'settings.prescription_header' => 'nullable|string|max:255',
             'logo' => 'nullable|image|max:2048',
         ])['form'];

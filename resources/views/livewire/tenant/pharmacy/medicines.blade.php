@@ -75,7 +75,7 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
             'form.form' => 'required|in:'.implode(',', Medicine::FORMS),
             'form.strength' => 'nullable|string|max:50',
             'form.unit' => 'required|string|max:30',
-            'form.barcode' => 'nullable|string|max:64',
+            'form.barcode' => ['nullable', 'string', 'max:64', tenant_unique('medicines', 'barcode', $this->editingId)],
             'form.rack_location' => 'nullable|string|max:50',
             'form.reorder_level' => 'required|integer|min:0',
             'form.purchase_price' => 'required|integer|min:0',

@@ -34,6 +34,7 @@ new #[Layout('layouts.app')] #[Title('Imaging Catalog')] class extends Component
     {
         $this->editingId = $id;
         $this->form = collect(RadiologyTest::findOrFail($id)->only(['code', 'name', 'modality', 'body_part', 'price', 'preparation', 'is_active']))->map(fn ($v) => is_bool($v) ? $v : (string) $v)->all();
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -41,8 +42,8 @@ new #[Layout('layouts.app')] #[Title('Imaging Catalog')] class extends Component
     {
         $this->authorize('radiology.manage_tests');
         $data = $this->validate([
-            'form.code' => 'required|string|max:20',
-            'form.name' => 'required|string|max:150',
+            'form.code' => ['required', 'string', 'max:20', tenant_unique('radiology_tests', 'code', $this->editingId)],
+            'form.name' => ['required', 'string', 'max:150', tenant_unique('radiology_tests', 'name', $this->editingId)],
             'form.modality' => 'required|in:'.implode(',', array_keys(RadiologyTest::MODALITIES)),
             'form.body_part' => 'nullable|string|max:100',
             'form.price' => 'required|integer|min:0',

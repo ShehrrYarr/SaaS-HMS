@@ -30,6 +30,7 @@ new #[Layout('layouts.app')] #[Title('Lab Devices')] class extends Component
     {
         $this->editingId = $id;
         $this->form = LabDevice::findOrFail($id)->only(['name', 'manufacturer', 'model', 'serial_no', 'protocol', 'notes', 'is_active']);
+        $this->resetValidation();
         $this->showForm = true;
     }
 

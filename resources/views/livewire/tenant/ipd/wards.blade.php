@@ -40,6 +40,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
         $w = Ward::findOrFail($id);
         $this->editingId = $id;
         $this->ward = $w->only(['name', 'type', 'floor', 'charge_per_day', 'description', 'is_active']);
+        $this->resetValidation();
         $this->showWard = true;
     }
 
@@ -47,7 +48,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
     {
         $this->authorize('beds.manage');
         $data = $this->validate([
-            'ward.name' => 'required|string|max:100',
+            'ward.name' => ['required', 'string', 'max:100', tenant_unique('wards', 'name', $this->editingId)],
             'ward.type' => 'required|in:'.implode(',', array_keys(Ward::TYPES)),
             'ward.floor' => 'nullable|string|max:30',
             'ward.charge_per_day' => 'required|integer|min:0',

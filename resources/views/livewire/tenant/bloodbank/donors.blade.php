@@ -49,6 +49,7 @@ new #[Layout('layouts.app')] #[Title('Blood Donors')] class extends Component
         $d = BloodDonor::findOrFail($id);
         $this->editingId = $id;
         $this->form = collect($d->only(['name', 'gender', 'blood_group', 'phone', 'email', 'address', 'weight', 'notes']))->map(fn ($v) => (string) $v)->all() + ['date_of_birth' => $d->date_of_birth?->toDateString() ?? ''];
+        $this->resetValidation();
         $this->showForm = true;
     }
 

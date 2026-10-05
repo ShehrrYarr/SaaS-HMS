@@ -28,6 +28,7 @@ new #[Layout('layouts.app')] #[Title('Departments')] class extends Component
     {
         $this->editingId = $id;
         $this->form = collect(Department::findOrFail($id)->only(['name', 'code', 'type', 'description', 'is_active']))->map(fn ($v) => is_bool($v) ? $v : (string) $v)->all();
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -35,8 +36,8 @@ new #[Layout('layouts.app')] #[Title('Departments')] class extends Component
     {
         $this->authorize('departments.manage');
         $data = $this->validate([
-            'form.name' => 'required|string|max:100',
-            'form.code' => 'nullable|string|max:20',
+            'form.name' => ['required', 'string', 'max:100', tenant_unique('departments', 'name', $this->editingId)],
+            'form.code' => ['nullable', 'string', 'max:20', tenant_unique('departments', 'code', $this->editingId)],
             'form.type' => 'required|in:clinical,diagnostic,support,administrative',
             'form.description' => 'nullable|string|max:500',
             'form.is_active' => 'boolean',

@@ -77,6 +77,7 @@ new #[Layout('layouts.app')] #[Title('Blood Bank')] class extends Component
         $bag = BloodBag::findOrFail($id);
         $this->screeningId = $id;
         $this->screening = array_merge(array_fill_keys(['hiv', 'hbv', 'hcv', 'syphilis', 'malaria'], 'pending'), $bag->screening ?? []);
+        $this->resetValidation();
         $this->showScreening = true;
     }
 

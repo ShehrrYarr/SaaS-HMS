@@ -34,6 +34,7 @@ new #[Layout('layouts.app')] #[Title('Service Charges')] class extends Component
     {
         $this->editingId = $id;
         $this->form = collect(ServiceCharge::findOrFail($id)->only(['code', 'name', 'category', 'price', 'tax_percent', 'is_active']))->map(fn ($v) => is_bool($v) ? $v : (string) $v)->all();
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -41,8 +42,8 @@ new #[Layout('layouts.app')] #[Title('Service Charges')] class extends Component
     {
         $this->authorize('billing.create');
         $data = $this->validate([
-            'form.code' => 'nullable|string|max:20',
-            'form.name' => 'required|string|max:150',
+            'form.code' => ['nullable', 'string', 'max:20', tenant_unique('service_charges', 'code', $this->editingId)],
+            'form.name' => ['required', 'string', 'max:150', tenant_unique('service_charges', 'name', $this->editingId)],
             'form.category' => 'required|string|max:30',
             'form.price' => 'required|integer|min:0',
             'form.tax_percent' => 'required|numeric|min:0|max:100',

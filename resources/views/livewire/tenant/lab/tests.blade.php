@@ -75,8 +75,8 @@ new #[Layout('layouts.app')] #[Title('Lab Test Catalog')] class extends Componen
         $this->authorize('lab.manage_tests');
         $data = $this->validate([
             'form.lab_test_category_id' => ['nullable', tenant_exists('lab_test_categories')],
-            'form.code' => 'required|string|max:20',
-            'form.name' => 'required|string|max:150',
+            'form.code' => ['required', 'string', 'max:20', tenant_unique('lab_tests', 'code', $this->editingId)],
+            'form.name' => ['required', 'string', 'max:150', tenant_unique('lab_tests', 'name', $this->editingId)],
             'form.sample_type' => 'required|string|max:30',
             'form.container' => 'nullable|string|max:50',
             'form.price' => 'required|integer|min:0',

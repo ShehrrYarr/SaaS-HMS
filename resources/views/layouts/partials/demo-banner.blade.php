@@ -1,7 +1,9 @@
 @if (is_demo_hospital() && auth()->check())
     @php
         $hours = max(1, (int) config('hms.demo.reset_every_hours'));
-        $nextReset = now()->startOfDay()->addHours((intdiv(now()->hour, $hours) + 1) * $hours);
+        // The reset is scheduled on UTC hours (0, 6, 12, 18); show it in the hospital's local time.
+        $utc = now('UTC');
+        $nextReset = $utc->copy()->startOfDay()->addHours((intdiv($utc->hour, $hours) + 1) * $hours)->setTimezone(date_default_timezone_get());
         $accounts = config('hms.demo.accounts');
         $current = collect($accounts)->search(fn ($a) => $a['email'] === auth()->user()->email);
     @endphp

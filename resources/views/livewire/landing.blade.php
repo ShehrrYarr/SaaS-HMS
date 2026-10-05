@@ -137,7 +137,7 @@ new #[Layout('layouts.landing')] class extends Component
                                     <div class="col-6 col-md-3"><div class="lp-tile"><small>Patients today</small><b>48</b></div></div>
                                     <div class="col-6 col-md-3"><div class="lp-tile"><small>Bed occupancy</small><b>82%</b></div></div>
                                     <div class="col-6 col-md-3"><div class="lp-tile"><small>Lab pending</small><b>12</b></div></div>
-                                    <div class="col-6 col-md-3"><div class="lp-tile"><small>Collections</small><b>$6.4k</b></div></div>
+                                    <div class="col-6 col-md-3"><div class="lp-tile"><small>Collections</small><b>Rs 3.2 lac</b></div></div>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-7"><div class="lp-tile h-100"><small>OPD visits · 14 days</small>

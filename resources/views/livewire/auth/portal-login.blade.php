@@ -99,7 +99,9 @@ new #[Layout('layouts.guest')] #[Title('Patient Portal')] class extends Componen
         $otp = OtpCode::where('user_id', $this->otpUserId)->whereNull('consumed_at')->latest()->first();
 
         if (! $otp || $otp->expires_at->isPast() || $otp->attempts >= 5) {
-            $this->addError('code', 'This code has expired. Please request a new one.');
+            $this->addError('code', $otp && $otp->attempts >= 5
+                ? 'Too many incorrect codes. Please request a new one.'
+                : 'This code has expired. Please request a new one.');
 
             return;
         }

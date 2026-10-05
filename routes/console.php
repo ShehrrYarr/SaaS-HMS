@@ -80,6 +80,7 @@ Artisan::command('hms:reset-demo {--force : Run even when the public demo is dis
 
 Schedule::command('hms:reset-demo')
     ->cron('0 */'.max(1, (int) config('hms.demo.reset_every_hours', 6)).' * * *')
+    ->timezone('UTC') // the demo banner announces the next reset on these UTC hours
     ->when(fn () => (bool) config('hms.demo.enabled'))
     ->withoutOverlapping();
 Schedule::command('hms:billing-run')->dailyAt('01:00')->withoutOverlapping();

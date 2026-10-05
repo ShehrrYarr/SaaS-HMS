@@ -49,6 +49,7 @@ class PageSmokeTest extends TestCase
             'invoiceId' => Invoice::first()->id,
             'prescriptionId' => Prescription::first()->id,
             'payrollId' => Payroll::first()->id,
+            'account' => \App\Models\BankAccount::where('type', 'bank')->value('id'),
         ];
     }
 

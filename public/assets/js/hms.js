@@ -192,9 +192,23 @@
         });
     });
 
-    document.addEventListener('livewire:navigating', () => closeMobileSidebar());
+    // Livewire swaps in the new page's bare <html> attributes, which drops the theme
+    // settings (layout, colour mode, sidebar style...) set by layout.js. Carry them over.
+    let htmlSettings = null;
+    document.addEventListener('livewire:navigating', () => {
+        closeMobileSidebar();
+        htmlSettings = [...document.documentElement.attributes]
+            .filter((a) => a.name.startsWith('data-') || a.name === 'dir')
+            .map((a) => [a.name, a.value]);
+    });
 
     document.addEventListener('livewire:navigated', () => {
+        if (htmlSettings) {
+            htmlSettings.forEach(([name, value]) => {
+                if (!document.documentElement.hasAttribute(name)) document.documentElement.setAttribute(name, value);
+            });
+            htmlSettings = null;
+        }
         setActiveMenu();
         initPageUi();
     });

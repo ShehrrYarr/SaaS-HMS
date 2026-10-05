@@ -25,6 +25,6 @@
             </td>
         </tr>
     </table>
-    <div class="box" style="margin-top: 12px; font-size: 13px;"><b>Net pay: {{ money($p->net_pay) }}</b> <span class="muted small">· {{ strtoupper($p->status) }} {{ $p->paid_at ? 'on '.$p->paid_at->format('d M Y').' via '.str_replace('_', ' ', $p->payment_method) : '' }}</span></div>
+    <div class="box" style="margin-top: 12px; font-size: 13px;"><b>Net pay: {{ money($p->net_pay) }}</b> <span class="muted small">· {{ strtoupper($p->status) }} {{ $p->paid_at ? 'on '.$p->paid_at->format('d M Y').' from '.($p->account?->label ?? str_replace('_', ' ', $p->payment_method)) : '' }}</span></div>
     <p class="muted small" style="margin-top: 30px;">This is a computer-generated payslip and does not require a signature.</p>
 @endsection

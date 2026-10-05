@@ -31,7 +31,7 @@ new #[Layout('layouts.app')] #[Title('Admit Patient')] class extends Component
             'admission_type' => 'planned', 'reason' => '', 'provisional_diagnosis' => '',
             'tpa_id' => $patient?->tpa_id ? (string) $patient->tpa_id : '', 'insurance_policy_no' => (string) $patient?->insurance_policy_no,
             'guardian_name' => (string) ($patient?->emergency_contact_name ?? ''), 'guardian_phone' => (string) ($patient?->emergency_contact_phone ?? ''),
-            'deposit_amount' => '', 'expected_discharge_date' => '',
+            'deposit_amount' => '', 'deposit_account_id' => (string) \App\Models\BankAccount::cash()->id, 'expected_discharge_date' => '',
         ];
         $this->patientLabel = $this->patientLabel($patient?->id);
     }
@@ -61,7 +61,8 @@ new #[Layout('layouts.app')] #[Title('Admit Patient')] class extends Component
             'form.insurance_policy_no' => 'nullable|string|max:100',
             'form.guardian_name' => 'nullable|string|max:120',
             'form.guardian_phone' => 'nullable|string|max:30',
-            'form.deposit_amount' => 'nullable|numeric|min:0',
+            'form.deposit_amount' => 'nullable|integer|min:0',
+            'form.deposit_account_id' => ['required_with:form.deposit_amount', 'nullable', bank_account_exists()],
             'form.expected_discharge_date' => 'nullable|date|after_or_equal:today',
         ], [], ['form.patient_id' => 'patient', 'form.doctor_id' => 'doctor', 'form.bed_id' => 'bed'])['form'];
 
@@ -102,7 +103,8 @@ new #[Layout('layouts.app')] #[Title('Admit Patient')] class extends Component
                         <x-form.input class="col-md-6" label="Policy no." model="form.insurance_policy_no" />
                         <x-form.input class="col-md-6" label="Guardian / attendant" model="form.guardian_name" />
                         <x-form.input class="col-md-6" label="Guardian phone" model="form.guardian_phone" />
-                        <x-form.input class="col-md-6" label="Advance deposit" model="form.deposit_amount" type="number" step="0.01" :prepend="currency_symbol()" />
+                        <x-form.money class="col-md-6" label="Advance deposit" model="form.deposit_amount" />
+                        <x-form.account class="col-md-6" label="Deposit received in" model="form.deposit_account_id" />
                         <x-form.input class="col-md-6" label="Expected discharge" model="form.expected_discharge_date" type="date" />
                     </div>
                 </div>

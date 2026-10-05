@@ -53,7 +53,7 @@ class WorkflowTest extends TestCase
         $this->assertSame('checked_in', $appointment->fresh()->status);
         $this->assertNotNull($visit->invoice_id);
         $commission = \App\Models\DoctorCommission::where('staff_id', $visit->doctor_id)->latest('id')->first();
-        $this->assertEquals(round((float) $visit->invoice->items->first()->total * $visit->doctor->commission_percent / 100, 2), (float) $commission->amount);
+        $this->assertSame(rupees($visit->invoice->items->first()->total * $visit->doctor->commission_percent / 100), $commission->amount);
     }
 
     public function test_pharmacy_sale_deducts_stock_first_expiry_first_out(): void

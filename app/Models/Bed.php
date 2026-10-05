@@ -16,7 +16,7 @@ class Bed extends Model
     protected function casts(): array
     {
         return [
-            'charge_per_day' => 'decimal:2',
+            'charge_per_day' => 'integer',
         ];
     }
 

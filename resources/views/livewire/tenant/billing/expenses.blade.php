@@ -1,8 +1,11 @@
 <?php
 
 use App\Livewire\Concerns\WithTable;
+use App\Models\BankAccount;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Services\LedgerService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -45,7 +48,7 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
     public function create(): void
     {
         $this->editingId = null;
-        $this->form = ['expense_category_id' => '', 'title' => '', 'amount' => '', 'tax_amount' => 0, 'expense_date' => today()->toDateString(), 'paid_to' => '', 'payment_method' => 'cash', 'reference' => '', 'notes' => ''];
+        $this->form = ['expense_category_id' => '', 'title' => '', 'amount' => '', 'tax_amount' => 0, 'expense_date' => today()->toDateString(), 'paid_to' => '', 'bank_account_id' => (string) BankAccount::cash()->id, 'reference' => '', 'notes' => ''];
         $this->attachment = null;
         $this->resetValidation();
         $this->showForm = true;
@@ -55,7 +58,11 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
     {
         $e = Expense::findOrFail($id);
         $this->editingId = $id;
-        $this->form = collect($e->only(['expense_category_id', 'title', 'amount', 'tax_amount', 'paid_to', 'payment_method', 'reference', 'notes']))->map(fn ($v) => (string) $v)->all() + ['expense_date' => $e->expense_date->toDateString()];
+        $this->form = collect($e->only(['expense_category_id', 'title', 'amount', 'tax_amount', 'paid_to', 'bank_account_id', 'reference', 'notes']))->map(fn ($v) => (string) $v)->all() + ['expense_date' => $e->expense_date->toDateString()];
+        if (! BankAccount::active()->whereKey($e->bank_account_id)->exists()) {
+            $this->form['bank_account_id'] = (string) BankAccount::cash()->id;
+        }
+        $this->resetValidation();
         $this->showForm = true;
     }
 
@@ -66,34 +73,43 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
         $this->newCategory = '';
     }
 
-    public function save(): void
+    public function save(LedgerService $ledger): void
     {
         $this->authorize('expenses.manage');
         $data = $this->validate([
             'form.expense_category_id' => ['nullable', tenant_exists('expense_categories')],
             'form.title' => 'required|string|max:150',
-            'form.amount' => 'required|numeric|min:0.01',
-            'form.tax_amount' => 'nullable|numeric|min:0',
+            'form.amount' => 'required|integer|min:1',
+            'form.tax_amount' => 'nullable|integer|min:0',
             'form.expense_date' => 'required|date',
             'form.paid_to' => 'nullable|string|max:150',
-            'form.payment_method' => 'required|in:cash,card,bank_transfer,cheque,online',
+            'form.bank_account_id' => ['required', bank_account_exists()],
             'form.reference' => 'nullable|string|max:100',
             'form.notes' => 'nullable|string|max:1000',
             'attachment' => 'nullable|file|max:10240|mimes:pdf,jpg,jpeg,png',
-        ])['form'];
-        $data = array_map(fn ($v) => $v === '' ? null : $v, $data) + ['tax_amount' => 0];
+        ], [], ['form.bank_account_id' => 'paid from'])['form'];
+        $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
+        $data['tax_amount'] ??= 0;
+        $data['payment_method'] = BankAccount::find($data['bank_account_id'])->type;
         if ($this->attachment) {
             $data['attachment_path'] = $this->attachment->store(hospital()->storagePath('expenses'), 'local');
         }
-        $this->editingId ? Expense::findOrFail($this->editingId)->update($data) : Expense::create($data + ['created_by' => auth()->id()]);
+        DB::transaction(function () use ($data, $ledger) {
+            $expense = $this->editingId ? tap(Expense::findOrFail($this->editingId))->update($data) : Expense::create($data + ['created_by' => auth()->id()]);
+            $ledger->postExpense($expense);
+        });
         $this->showForm = false;
         $this->toast('Expense saved.');
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, LedgerService $ledger): void
     {
         $this->authorize('expenses.manage');
-        Expense::findOrFail($id)->delete();
+        $expense = Expense::findOrFail($id);
+        DB::transaction(function () use ($expense, $ledger) {
+            $ledger->forget($expense);
+            $expense->delete();
+        });
     }
 
     public function with(): array
@@ -105,7 +121,7 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
             ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('title', 'like', "%{$this->search}%")->orWhere('paid_to', 'like', "%{$this->search}%")));
 
         return [
-            'expenses' => $this->applySort($filters(Expense::with(['category', 'creator'])))->paginate($this->perPage),
+            'expenses' => $this->applySort($filters(Expense::with(['category', 'creator', 'account'])))->paginate($this->perPage),
             'total' => (float) $filters(Expense::query())->sum('amount'),
             'byCategory' => $filters(Expense::query())->toBase()->leftJoin('expense_categories', 'expense_categories.id', '=', 'expenses.expense_category_id')
                 ->selectRaw("coalesce(expense_categories.name, 'Uncategorised') name, sum(expenses.amount) total")->groupBy('name')->orderByDesc('total')->get(),
@@ -129,13 +145,13 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
                 </x-table-toolbar>
                 <div class="table-responsive">
                     <table class="table table-hms table-hover mb-0">
-                        <thead class="table-light"><tr><x-th field="expense_date" :sort="$sortField" :dir="$sortDirection">Date</x-th><th>Title</th><th>Category</th><th>Paid to</th><th>Method</th><x-th field="amount" :sort="$sortField" :dir="$sortDirection" class="text-end">Amount</x-th><th></th></tr></thead>
+                        <thead class="table-light"><tr><x-th field="expense_date" :sort="$sortField" :dir="$sortDirection">Date</x-th><th>Title</th><th>Category</th><th>Paid to</th><th>Paid from</th><x-th field="amount" :sort="$sortField" :dir="$sortDirection" class="text-end">Amount</x-th><th></th></tr></thead>
                         <tbody>
                             @forelse ($expenses as $e)
                                 <tr wire:key="exp-{{ $e->id }}">
                                     <td>{{ fmt_date($e->expense_date) }}</td>
                                     <td>{{ $e->title }} @if ($e->attachment_path)<a href="{{ route('files.show', ['path' => $e->attachment_path]) }}" target="_blank"><i class="ri-attachment-2"></i></a>@endif<div class="fs-12 text-muted">{{ $e->reference }}</div></td>
-                                    <td>{{ $e->category?->name ?? '—' }}</td><td>{{ $e->paid_to }}</td><td>{{ label($e->payment_method) }}</td>
+                                    <td>{{ $e->category?->name ?? '—' }}</td><td>{{ $e->paid_to }}</td><td>{{ $e->account?->label ?? label($e->payment_method) }}</td>
                                     <td class="text-end">{{ money($e->amount) }}</td>
                                     <td class="text-end text-nowrap">
                                         <button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $e->id }})"><i class="ri-edit-line"></i></button>
@@ -169,10 +185,10 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
                 <div class="input-group input-group-sm"><input type="text" class="form-control" placeholder="New category" wire:model="newCategory"><button type="button" class="btn btn-light" wire:click="addCategory">Add</button></div>
             </div>
             <x-form.input class="col-md-6" label="Date" model="form.expense_date" type="date" />
-            <x-form.input class="col-md-6" label="Amount" model="form.amount" type="number" step="0.01" required />
-            <x-form.input class="col-md-6" label="Tax included" model="form.tax_amount" type="number" step="0.01" />
+            <x-form.money class="col-md-6" label="Amount" model="form.amount" required />
+            <x-form.money class="col-md-6" label="Tax included" model="form.tax_amount" />
             <x-form.input class="col-md-6" label="Paid to" model="form.paid_to" />
-            <x-form.select class="col-md-6" label="Method" model="form.payment_method" :options="['cash' => 'Cash', 'card' => 'Card', 'bank_transfer' => 'Bank transfer', 'cheque' => 'Cheque', 'online' => 'Online']" :placeholder="false" />
+            <x-form.account class="col-md-6" label="Paid from" model="form.bank_account_id" />
             <x-form.input class="col-md-6" label="Reference" model="form.reference" />
             <div class="col-md-6 mb-3"><label class="form-label">Receipt</label><input type="file" class="form-control" wire:model="attachment"></div>
             <x-form.textarea class="col-12" label="Notes" model="form.notes" rows="2" />

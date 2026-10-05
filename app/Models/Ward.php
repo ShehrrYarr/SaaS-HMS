@@ -16,7 +16,7 @@ class Ward extends Model
     {
         return [
             'is_active' => 'boolean',
-            'charge_per_day' => 'decimal:2',
+            'charge_per_day' => 'integer',
         ];
     }
 

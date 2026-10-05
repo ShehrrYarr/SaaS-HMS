@@ -20,6 +20,10 @@ class PurchaseOrder extends Model
             'order_date' => 'date',
             'expected_date' => 'date',
             'received_at' => 'datetime',
+            'subtotal' => 'integer',
+            'tax' => 'integer',
+            'discount' => 'integer',
+            'total' => 'integer',
         ];
     }
 

@@ -177,6 +177,12 @@ Route::prefix('h/{hospital}')->middleware('tenant')->group(function () {
                 Route::get('invoices/{invoiceId}/pdf', [PdfController::class, 'invoice'])->middleware('can:billing.view')->name('pdf');
             });
 
+            // Banks & Cash (every plan: all money movements post here)
+            Route::prefix('banks')->name('banks.')->middleware('can:banks.view')->group(function () {
+                Volt::route('/', 'tenant.banks.index')->name('index');
+                Volt::route('{account}', 'tenant.banks.show')->name('show');
+            });
+
             // HR & payroll
             Route::middleware('module:hr')->prefix('hr')->name('hr.')->group(function () {
                 Volt::route('staff', 'tenant.hr.staff')->middleware('can:hr.staff')->name('staff');

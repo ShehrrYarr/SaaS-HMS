@@ -18,9 +18,9 @@ class InsuranceClaim extends Model
         return [
             'submitted_at' => 'date',
             'settled_at' => 'date',
-            'claim_amount' => 'decimal:2',
-            'approved_amount' => 'decimal:2',
-            'settled_amount' => 'decimal:2',
+            'claim_amount' => 'integer',
+            'approved_amount' => 'integer',
+            'settled_amount' => 'integer',
         ];
     }
 

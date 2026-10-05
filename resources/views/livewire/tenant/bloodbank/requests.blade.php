@@ -90,7 +90,7 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
     public function issue(int $crossmatchId, BloodBankService $bb): void
     {
         $this->authorize('bloodbank.manage');
-        $this->validate(['charge' => 'nullable|numeric|min:0']);
+        $this->validate(['charge' => 'nullable|integer|min:0']);
         $bb->issue(BloodCrossmatch::with('request.patient', 'request.admission', 'bag')->findOrFail($crossmatchId), (float) $this->charge);
         $this->toast('Unit issued.');
     }
@@ -168,7 +168,7 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
                                         </div>
                                         <div class="col-md-6">
                                             <h6>Cross-matches</h6>
-                                            <div class="input-group input-group-sm mb-2"><span class="input-group-text">Charge per unit</span><input type="number" step="0.01" class="form-control" wire:model="charge"></div>
+                                            <div class="input-group input-group-sm mb-2"><span class="input-group-text">Charge per unit</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control" wire:model="charge"></div>
                                             @forelse ($r->crossmatches as $cm)
                                                 <div class="d-flex justify-content-between align-items-center border-bottom py-1 fs-13">
                                                     <span>{{ $cm->bag->bag_no }} ({{ $cm->bag->blood_group }}) · <x-status :value="$cm->result" /> @if ($cm->issued_at)<span class="badge bg-success">Issued {{ $cm->issued_at->format('d M H:i') }}</span>@endif</span>

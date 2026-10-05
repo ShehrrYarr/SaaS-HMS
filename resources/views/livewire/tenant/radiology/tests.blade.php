@@ -45,7 +45,7 @@ new #[Layout('layouts.app')] #[Title('Imaging Catalog')] class extends Component
             'form.name' => 'required|string|max:150',
             'form.modality' => 'required|in:'.implode(',', array_keys(RadiologyTest::MODALITIES)),
             'form.body_part' => 'nullable|string|max:100',
-            'form.price' => 'required|numeric|min:0',
+            'form.price' => 'required|integer|min:0',
             'form.preparation' => 'nullable|string|max:1000',
             'form.is_active' => 'boolean',
         ])['form'];
@@ -91,7 +91,7 @@ new #[Layout('layouts.app')] #[Title('Imaging Catalog')] class extends Component
             <x-form.input class="col-md-8" label="Name" model="form.name" required />
             <x-form.select class="col-md-6" label="Modality" model="form.modality" :options="$modalities" :placeholder="false" />
             <x-form.input class="col-md-6" label="Body part" model="form.body_part" />
-            <x-form.input class="col-md-6" label="Price" model="form.price" type="number" step="0.01" required />
+            <x-form.money class="col-md-6" label="Price" model="form.price" required />
             <x-form.textarea class="col-12" label="Patient preparation" model="form.preparation" rows="2" />
             <x-form.switch class="col-12" label="Active" model="form.is_active" />
         </div>

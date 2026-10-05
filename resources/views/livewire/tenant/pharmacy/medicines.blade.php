@@ -78,8 +78,8 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
             'form.barcode' => 'nullable|string|max:64',
             'form.rack_location' => 'nullable|string|max:50',
             'form.reorder_level' => 'required|integer|min:0',
-            'form.purchase_price' => 'required|numeric|min:0',
-            'form.sale_price' => 'required|numeric|min:0',
+            'form.purchase_price' => 'required|integer|min:0',
+            'form.sale_price' => 'required|integer|min:0',
             'form.tax_percent' => 'required|numeric|min:0|max:100',
             'form.requires_prescription' => 'boolean',
             'form.is_active' => 'boolean',
@@ -117,8 +117,8 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
             'batch.expiry_date' => 'required|date|after:today',
             'batch.mfg_date' => 'nullable|date|before_or_equal:today',
             'batch.quantity' => 'required|integer|min:1',
-            'batch.purchase_price' => 'required|numeric|min:0',
-            'batch.sale_price' => 'required|numeric|min:0',
+            'batch.purchase_price' => 'required|integer|min:0',
+            'batch.sale_price' => 'required|integer|min:0',
             'batch.supplier_id' => ['nullable', tenant_exists('suppliers')],
         ]);
         $b = MedicineBatch::create([
@@ -208,8 +208,8 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
             <x-form.input class="col-md-4" label="Barcode" model="form.barcode" />
             <x-form.input class="col-md-4" label="Rack location" model="form.rack_location" />
             <x-form.input class="col-md-4" label="Re-order level" model="form.reorder_level" type="number" />
-            <x-form.input class="col-md-4" label="Purchase price" model="form.purchase_price" type="number" step="0.01" required />
-            <x-form.input class="col-md-4" label="Sale price (MRP)" model="form.sale_price" type="number" step="0.01" required />
+            <x-form.money class="col-md-4" label="Purchase price" model="form.purchase_price" required />
+            <x-form.money class="col-md-4" label="Sale price (MRP)" model="form.sale_price" required />
             <x-form.input class="col-md-4" label="Tax %" model="form.tax_percent" type="number" step="0.01" />
             <x-form.switch class="col-md-6" label="Prescription required" model="form.requires_prescription" />
             <x-form.switch class="col-md-6" label="Active" model="form.is_active" />
@@ -223,8 +223,8 @@ new #[Layout('layouts.app')] #[Title('Medicines')] class extends Component
             <x-form.input class="col-md-6" label="Quantity" model="batch.quantity" type="number" required />
             <x-form.input class="col-md-6" label="Mfg date" model="batch.mfg_date" type="date" />
             <x-form.input class="col-md-6" label="Expiry date" model="batch.expiry_date" type="date" required />
-            <x-form.input class="col-md-6" label="Purchase price" model="batch.purchase_price" type="number" step="0.01" />
-            <x-form.input class="col-md-6" label="Sale price" model="batch.sale_price" type="number" step="0.01" />
+            <x-form.money class="col-md-6" label="Purchase price" model="batch.purchase_price" />
+            <x-form.money class="col-md-6" label="Sale price" model="batch.sale_price" />
             <x-form.select class="col-12" label="Supplier" model="batch.supplier_id" :options="$suppliers" />
         </div>
         <x-slot:footer><button class="btn btn-light" x-on:click="show = false">Cancel</button><button class="btn btn-primary" wire:click="saveBatch">Add stock</button></x-slot:footer>

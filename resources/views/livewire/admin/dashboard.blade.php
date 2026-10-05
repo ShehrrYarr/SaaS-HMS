@@ -66,8 +66,8 @@ new #[Layout('layouts.admin')] #[Title('Platform Dashboard')] class extends Comp
     </x-page-header>
 
     <div class="row g-4 mb-4">
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="Total Revenue" :value="money($stats['revenue'], 'USD')" icon="ri-money-dollar-circle-line" color="success" :hint="'This month: '.money($stats['revenue_month'], 'USD')" /></div>
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="MRR (estimated)" :value="money($stats['mrr'], 'USD')" icon="ri-line-chart-line" color="primary" :hint="'Outstanding: '.money($stats['pending'], 'USD')" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="Total Revenue" :value="money($stats['revenue'])" icon="ri-money-rupee-circle-line" color="success" :hint="'This month: '.money($stats['revenue_month'], 'USD')" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="MRR (estimated)" :value="money($stats['mrr'])" icon="ri-line-chart-line" color="primary" :hint="'Outstanding: '.money($stats['pending'], 'USD')" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Active Hospitals" :value="$stats['active'].' / '.$stats['hospitals']" icon="ri-hospital-line" color="info" :hint="$stats['trial'].' on trial &middot; '.$stats['suspended'].' suspended'" :href="route('admin.hospitals.index')" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Storage Used" :value="human_bytes($stats['storage'])" icon="ri-hard-drive-2-line" color="warning" :hint="number_format($stats['users']).' users &middot; '.number_format($stats['patients']).' patients'" /></div>
     </div>
@@ -119,7 +119,7 @@ new #[Layout('layouts.admin')] #[Title('Platform Dashboard')] class extends Comp
                 </div>
                 <ul class="list-group list-group-flush">
                     @forelse ($toVerify as $inv)
-                        <li class="list-group-item d-flex justify-content-between"><span>{{ $inv->hospital?->name }} &middot; {{ $inv->number }}</span><strong>{{ money($inv->total, $inv->currency) }}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>{{ $inv->hospital?->name }} &middot; {{ $inv->number }}</span><strong>{{ money($inv->total) }}</strong></li>
                     @empty
                         <li class="list-group-item text-muted text-center py-4">Nothing to verify.</li>
                     @endforelse

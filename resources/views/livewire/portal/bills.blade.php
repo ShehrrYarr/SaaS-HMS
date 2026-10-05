@@ -2,6 +2,7 @@
 
 use App\Livewire\Concerns\Toasts;
 use App\Models\AuditLog;
+use App\Models\BankAccount;
 use App\Models\User;
 use App\Notifications\HmsNotification;
 use Livewire\Attributes\Layout;
@@ -19,6 +20,9 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
 
     public string $amount = '';
 
+    /** Hospital bank the patient transferred to. */
+    public string $bank = '';
+
     public $proof;
 
     public function mount(): void
@@ -28,20 +32,24 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
 
     public function report(): void
     {
-        $this->validate(['payingId' => 'required', 'reference' => 'required|string|max:100', 'amount' => 'required|numeric|min:1', 'proof' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png']);
+        $this->validate([
+            'payingId' => 'required', 'reference' => 'required|string|max:100', 'amount' => 'required|integer|min:1', 'proof' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png',
+            'bank' => ['required', tenant_exists('bank_accounts')->where('show_to_patients', true)->where('is_active', true)],
+        ], [], ['bank' => 'bank']);
+        $bank = BankAccount::findOrFail($this->bank);
         $patient = auth()->user()->patient;
         $invoice = $patient->invoices()->whereIn('status', ['unpaid', 'partial'])->findOrFail($this->payingId);
         $path = $this->proof?->store(hospital()->storagePath("patients/{$patient->id}/payments"), 'local');
 
-        $invoice->update(['notes' => trim(($invoice->notes ? $invoice->notes."\n" : '')."Patient reported transfer {$this->reference} of ".money($this->amount).' on '.now()->format('d M Y H:i'))]);
-        AuditLog::record('payment_reported', $invoice, [], ['reference' => $this->reference, 'amount' => $this->amount, 'proof' => $path], 'Patient reported a bank transfer');
+        $invoice->update(['notes' => trim(($invoice->notes ? $invoice->notes."\n" : '')."Patient reported transfer {$this->reference} of ".money($this->amount)." to {$bank->label} on ".now()->format('d M Y H:i'))]);
+        AuditLog::record('payment_reported', $invoice, [], ['reference' => $this->reference, 'amount' => $this->amount, 'bank_account_id' => $bank->id, 'proof' => $path], 'Patient reported a bank transfer');
 
         User::where('hospital_id', hospital()->id)->permission('billing.collect')->get()->each(fn ($u) => $u->notify(new HmsNotification(
-            'Patient payment to verify', "{$patient->full_name} reported ".money($this->amount)." for {$invoice->invoice_no} (ref {$this->reference})",
+            'Patient payment to verify', "{$patient->full_name} reported ".money($this->amount)." to {$bank->label} for {$invoice->invoice_no} (ref {$this->reference})",
             route('tenant.billing.show', $invoice), 'ri-bank-line', 'warning'
         )));
 
-        $this->reset('payingId', 'reference', 'amount', 'proof');
+        $this->reset('payingId', 'reference', 'amount', 'proof', 'bank');
         $this->toast('Thank you! The billing desk will confirm your payment shortly.');
     }
 
@@ -49,7 +57,7 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
     {
         return [
             'invoices' => auth()->user()->patient->invoices()->with('payments')->where('status', '!=', 'cancelled')->latest('invoice_date')->get(),
-            'bank' => hospital()->setting('bank_details'),
+            'banks' => BankAccount::active()->where('type', 'bank')->where('show_to_patients', true)->orderBy('name')->get(),
         ];
     }
 }; ?>
@@ -81,11 +89,20 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
         <div class="card mb-0 border-success">
             <div class="card-header"><h6 class="card-title mb-0">Pay online / bank transfer</h6></div>
             <div class="card-body">
-                <p class="fs-13">You can pay at the hospital billing counter (cash/card), or transfer to the hospital account and report it here.</p>
-                @if ($bank)<pre class="bg-body-tertiary p-3 rounded fs-13">{{ $bank }}</pre>@endif
-                <div class="row">
-                    <x-form.input class="col-md-4" label="Amount transferred" model="amount" type="number" step="0.01" required />
-                    <x-form.input class="col-md-8" label="Transaction reference" model="reference" required />
+                <p class="fs-13">You can pay at the hospital billing counter, or transfer to one of the hospital accounts below and report it here.</p>
+                @forelse ($banks as $b)
+                    <div class="bg-body-tertiary p-3 rounded fs-13 mb-2">
+                        <strong>{{ $b->name }}</strong>@if ($b->branch) <span class="text-muted">· {{ $b->branch }}</span>@endif<br>
+                        Account title: {{ $b->account_title ?: hospital()->name }}<br>
+                        Account no: {{ $b->account_number }}@if ($b->iban)<br>IBAN: {{ $b->iban }}@endif
+                    </div>
+                @empty
+                    <div class="alert alert-light fs-13">Online transfer details are not available yet. Please pay at the billing counter.</div>
+                @endforelse
+                <div class="row mt-3">
+                    <x-form.money class="col-md-4" label="Amount transferred" model="amount" required />
+                    <x-form.select class="col-md-8" label="Transferred to" model="bank" :options="$banks->mapWithKeys(fn ($b) => [$b->id => $b->label])->all()" required />
+                    <x-form.input class="col-12" label="Transaction reference" model="reference" required />
                     <div class="col-12 mb-3"><label class="form-label">Receipt (optional)</label><input type="file" class="form-control" wire:model="proof"></div>
                 </div>
                 <button class="btn btn-success" wire:click="report">Report payment</button>

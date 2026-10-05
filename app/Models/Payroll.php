@@ -18,12 +18,12 @@ class Payroll extends Model
     {
         return [
             'paid_at' => 'datetime',
-            'basic' => 'decimal:2',
-            'allowances' => 'decimal:2',
-            'commission' => 'decimal:2',
-            'deductions' => 'decimal:2',
-            'absence_deduction' => 'decimal:2',
-            'net_pay' => 'decimal:2',
+            'basic' => 'integer',
+            'allowances' => 'integer',
+            'commission' => 'integer',
+            'deductions' => 'integer',
+            'absence_deduction' => 'integer',
+            'net_pay' => 'integer',
         ];
     }
 
@@ -40,5 +40,10 @@ class Payroll extends Model
     public function commissions(): HasMany
     {
         return $this->hasMany(DoctorCommission::class);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
     }
 }

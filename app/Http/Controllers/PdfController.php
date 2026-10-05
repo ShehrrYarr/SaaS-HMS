@@ -101,7 +101,7 @@ class PdfController extends Controller
     // ---------------------------------------------------------------- pharmacy
     public function pharmacyReceipt(int $saleId)
     {
-        $sale = PharmacySale::with(['items.medicine', 'items.batch', 'patient', 'seller'])->findOrFail($saleId);
+        $sale = PharmacySale::with(['items.medicine', 'items.batch', 'patient', 'seller', 'account'])->findOrFail($saleId);
 
         return $this->render('receipt', ['sale' => $sale], $sale->sale_no, [0, 0, 226, 600]);
     }
@@ -204,9 +204,9 @@ class PdfController extends Controller
 
     protected function renderInvoice(Invoice $invoice)
     {
-        $invoice->load(['patient', 'items.doctor', 'payments', 'tpa', 'admission.bed.ward', 'creator']);
+        $invoice->load(['patient', 'items.doctor', 'payments.account', 'tpa', 'admission.bed.ward', 'creator']);
 
-        return $this->render('invoice', ['invoice' => $invoice, 'qr' => DocumentAssets::qr($invoice->invoice_no.'|'.number_format((float) $invoice->total, 2, '.', ''))], $invoice->invoice_no);
+        return $this->render('invoice', ['invoice' => $invoice, 'qr' => DocumentAssets::qr($invoice->invoice_no.'|'.rupees($invoice->total))], $invoice->invoice_no);
     }
 
     // ---------------------------------------------------------------- HR

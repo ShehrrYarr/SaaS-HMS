@@ -19,7 +19,7 @@ class LabOrderItem extends Model
             'sample_collected_at' => 'datetime',
             'results_entered_at' => 'datetime',
             'approved_at' => 'datetime',
-            'price' => 'decimal:2',
+            'price' => 'integer',
         ];
     }
 

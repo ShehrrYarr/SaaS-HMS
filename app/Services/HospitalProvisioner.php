@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BankAccount;
 use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\Hospital;
@@ -71,6 +72,7 @@ class HospitalProvisioner
                 foreach (['Salaries', 'Utilities', 'Rent', 'Maintenance', 'Medical Supplies', 'Miscellaneous'] as $name) {
                     ExpenseCategory::create(['name' => $name]);
                 }
+                BankAccount::cash();
 
                 Subscription::create([
                     'plan_id' => $plan->id,

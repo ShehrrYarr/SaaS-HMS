@@ -26,10 +26,13 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
 
     public string $pay_amount = '';
 
-    public string $pay_method = 'cash';
+    public string $pay_account = '';
+
+    public string $pay_reference = '';
 
     public function mount(): void
     {
+        $this->pay_account = (string) \App\Models\BankAccount::cash()->id;
         if ($id = request()->integer('patient')) {
             $this->patient_id = (string) $id;
             $this->patientLabel = $this->patientLabel($id);
@@ -71,15 +74,15 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
         $tax = 0;
         $disc = 0;
         foreach ($this->items as $i) {
-            $line = (float) ($i['quantity'] ?: 0) * (float) ($i['unit_price'] ?: 0);
-            $d = (float) ($i['discount'] ?: 0);
+            $line = rupees((float) ($i['quantity'] ?: 0) * (float) ($i['unit_price'] ?: 0));
+            $d = rupees($i['discount'] ?: 0);
             $sub += $line;
             $disc += $d;
-            $tax += round(max(0, $line - $d) * (float) ($i['tax_percent'] ?: 0) / 100, 2);
+            $tax += rupees(max(0, $line - $d) * (float) ($i['tax_percent'] ?: 0) / 100);
         }
-        $total = $sub - $disc - (float) $this->discount + $tax;
+        $total = max(0, $sub - $disc - rupees($this->discount) + $tax);
 
-        return ['subtotal' => $sub, 'item_discount' => $disc, 'tax' => $tax, 'total' => round($total, 2)];
+        return ['subtotal' => $sub, 'item_discount' => $disc, 'tax' => $tax, 'total' => $total];
     }
 
     public function save(BillingService $billing)
@@ -91,24 +94,25 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
             'items.*.service_type' => 'required|in:opd,ipd,pharmacy,lab,radiology,ot,bloodbank,service,other',
             'items.*.description' => 'required|string|max:255',
             'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.discount' => 'nullable|numeric|min:0',
+            'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.discount' => 'nullable|integer|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
-            'discount' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|integer|min:0',
             'due_date' => 'nullable|date',
             'notes' => 'nullable|string|max:1000',
-            'pay_amount' => 'nullable|numeric|min:0',
-            'pay_method' => 'required|in:cash,card,bank_transfer,online,cheque',
-        ], [], ['patient_id' => 'patient', 'items.*.description' => 'description']);
+            'pay_amount' => 'nullable|integer|min:0',
+            'pay_account' => ['required_with:pay_amount', 'nullable', bank_account_exists()],
+            'pay_reference' => 'nullable|string|max:100',
+        ], [], ['patient_id' => 'patient', 'items.*.description' => 'description', 'items.*.unit_price' => 'price', 'pay_account' => 'account']);
 
         $invoice = $billing->createInvoice(Patient::findOrFail($this->patient_id), $this->items, [
-            'discount' => (float) $this->discount,
+            'discount' => rupees($this->discount),
             'due_date' => $this->due_date ?: null,
             'notes' => $this->notes ?: null,
         ]);
 
-        if ((float) $this->pay_amount > 0) {
-            $billing->addPayment($invoice, min((float) $this->pay_amount, $invoice->balance), $this->pay_method);
+        if ((int) $this->pay_amount > 0 && $invoice->balance > 0) {
+            $billing->addPayment($invoice, min((int) $this->pay_amount, $invoice->balance), $this->pay_account, $this->pay_reference ?: null);
         }
 
         session()->flash('success', "Invoice {$invoice->invoice_no} created.");
@@ -148,15 +152,15 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
                             <thead><tr><th style="width: 120px;">Type</th><th>Description</th><th style="width: 80px;">Qty</th><th style="width: 110px;">Price</th><th style="width: 100px;">Discount</th><th style="width: 80px;">Tax %</th><th class="text-end">Total</th><th></th></tr></thead>
                             <tbody>
                                 @foreach ($items as $i => $item)
-                                    @php $line = (float) ($item['quantity'] ?: 0) * (float) ($item['unit_price'] ?: 0) - (float) ($item['discount'] ?: 0); @endphp
+                                    @php $line = max(0, rupees((float) ($item['quantity'] ?: 0) * (float) ($item['unit_price'] ?: 0)) - rupees($item['discount'] ?: 0)); @endphp
                                     <tr wire:key="ii-{{ $i }}">
                                         <td><select class="form-select form-select-sm" wire:model="items.{{ $i }}.service_type">@foreach ($types as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></td>
                                         <td><input type="text" class="form-control form-control-sm @error('items.'.$i.'.description') is-invalid @enderror" wire:model="items.{{ $i }}.description"></td>
                                         <td><input type="number" step="0.5" class="form-control form-control-sm" wire:model.live.debounce.400ms="items.{{ $i }}.quantity"></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm @error('items.'.$i.'.unit_price') is-invalid @enderror" wire:model.live.debounce.400ms="items.{{ $i }}.unit_price"></td>
-                                        <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="items.{{ $i }}.discount"></td>
+                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.unit_price') is-invalid @enderror" wire:model.live.debounce.400ms="items.{{ $i }}.unit_price"></td>
+                                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.discount') is-invalid @enderror" wire:model.live.debounce.400ms="items.{{ $i }}.discount"></td>
                                         <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="items.{{ $i }}.tax_percent"></td>
-                                        <td class="text-end">{{ money($line * (1 + (float) ($item['tax_percent'] ?: 0) / 100)) }}</td>
+                                        <td class="text-end">{{ money($line + rupees($line * (float) ($item['tax_percent'] ?: 0) / 100)) }}</td>
                                         <td><button class="btn btn-sm btn-link text-danger" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button></td>
                                     </tr>
                                 @endforeach
@@ -175,15 +179,16 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
                 <div class="card-body">
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ money($totals['subtotal']) }}</span></div>
                     <div class="d-flex justify-content-between"><span>Line discounts</span><span>- {{ money($totals['item_discount']) }}</span></div>
-                    <div class="d-flex justify-content-between align-items-center my-1"><span>Invoice discount</span><input type="number" step="0.01" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.400ms="discount"></div>
+                    <div class="d-flex justify-content-between align-items-center my-1"><span>Invoice discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.400ms="discount"></div>
                     <div class="d-flex justify-content-between"><span>{{ hospital()->tax_label }}</span><span>{{ money($totals['tax']) }}</span></div>
                     <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-2 mt-2"><span>Total</span><span>{{ money($totals['total']) }}</span></div>
                     <x-form.input class="mt-3" label="Due date" model="due_date" type="date" />
                     <hr>
                     <h6 class="mb-2">Collect payment now <small class="text-muted fw-normal">(optional)</small></h6>
                     <div class="row g-2">
-                        <div class="col-6"><input type="number" step="0.01" class="form-control" placeholder="Amount" wire:model="pay_amount"></div>
-                        <div class="col-6"><select class="form-select" wire:model="pay_method">@foreach (['cash' => 'Cash', 'card' => 'Card', 'bank_transfer' => 'Bank transfer', 'online' => 'Online', 'cheque' => 'Cheque'] as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
+                        <x-form.money class="col-6" model="pay_amount" placeholder="Amount" />
+                        <x-form.account class="col-6" model="pay_account" :label="null" />
+                        <x-form.input class="col-12" model="pay_reference" placeholder="Reference (optional)" />
                     </div>
                 </div>
             </div>

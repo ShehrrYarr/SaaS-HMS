@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Concerns\Toasts;
+use App\Models\BankAccount;
 use App\Models\Payroll;
 use App\Services\PayrollService;
 use Livewire\Attributes\Layout;
@@ -15,11 +16,13 @@ new #[Layout('layouts.app')] #[Title('Payroll')] class extends Component
     #[Url]
     public string $month = '';
 
-    public string $payMethod = 'bank_transfer';
+    /** Bank / cash account salaries are paid from. */
+    public string $payAccount = '';
 
     public function mount(): void
     {
         $this->month = $this->month ?: today()->format('Y-m');
+        $this->payAccount = (string) (BankAccount::active()->where('type', 'bank')->orderBy('name')->value('id') ?? BankAccount::cash()->id);
     }
 
     public function generate(PayrollService $payroll): void
@@ -46,14 +49,16 @@ new #[Layout('layouts.app')] #[Title('Payroll')] class extends Component
     public function pay(int $id, PayrollService $payroll): void
     {
         $this->authorize('hr.payroll');
-        $payroll->pay(Payroll::findOrFail($id), $this->payMethod);
+        $this->validate(['payAccount' => ['required', bank_account_exists()]], [], ['payAccount' => 'paid from']);
+        $payroll->pay(Payroll::findOrFail($id), $this->payAccount);
         $this->toast('Marked as paid.');
     }
 
     public function payAll(PayrollService $payroll): void
     {
         $this->authorize('hr.payroll');
-        Payroll::where('month', $this->month)->where('status', 'approved')->get()->each(fn ($p) => $payroll->pay($p, $this->payMethod));
+        $this->validate(['payAccount' => ['required', bank_account_exists()]], [], ['payAccount' => 'paid from']);
+        Payroll::where('month', $this->month)->where('status', 'approved')->get()->each(fn ($p) => $payroll->pay($p, $this->payAccount));
         $this->toast('Approved payroll marked as paid.');
     }
 
@@ -75,7 +80,7 @@ new #[Layout('layouts.app')] #[Title('Payroll')] class extends Component
     </x-page-header>
 
     <div class="row g-4 mb-4">
-        <div class="col-md-3"><x-stat-card title="Gross" :value="money($totals['gross'])" icon="ri-money-dollar-box-line" color="primary" /></div>
+        <div class="col-md-3"><x-stat-card title="Gross" :value="money($totals['gross'])" icon="ri-money-rupee-circle-line" color="primary" /></div>
         <div class="col-md-3"><x-stat-card title="Deductions" :value="money($totals['deductions'])" icon="ri-subtract-line" color="danger" /></div>
         <div class="col-md-3"><x-stat-card title="Net payable" :value="money($totals['net'])" icon="ri-wallet-3-line" color="success" /></div>
         <div class="col-md-3"><x-stat-card title="Paid" :value="money($totals['paid'])" icon="ri-checkbox-circle-line" color="info" /></div>
@@ -83,7 +88,8 @@ new #[Layout('layouts.app')] #[Title('Payroll')] class extends Component
 
     <div class="card">
         <div class="card-header d-flex flex-wrap gap-2 justify-content-end align-items-center">
-            <select class="form-select form-select-sm w-auto" wire:model="payMethod"><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
+            <label class="fs-12 text-muted mb-0" for="payAccount">Pay from</label>
+            <select id="payAccount" class="form-select form-select-sm w-auto @error('payAccount') is-invalid @enderror" wire:model="payAccount">@foreach (\App\Models\BankAccount::options() as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select>
             <button class="btn btn-sm btn-light-success" wire:click="approveAll">Approve all drafts</button>
             <button class="btn btn-sm btn-success" x-on:click="$confirm('Mark all approved payroll as paid?', () => $wire.payAll(), { color: 'success' })">Pay all approved</button>
         </div>

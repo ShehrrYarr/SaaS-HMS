@@ -2,6 +2,7 @@
 
 use App\Livewire\Concerns\SearchesPatients;
 use App\Livewire\Concerns\Toasts;
+use App\Models\BankAccount;
 use App\Models\IpdAdmission;
 use App\Models\Medicine;
 use App\Models\Patient;
@@ -19,7 +20,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
     public string $barcode = '';
 
-    /** @var array<int, array{medicine_id:int, name:string, price:float, qty:int, stock:int, tax:float}> */
+    /** @var array<int, array{medicine_id:int, name:string, price:int, qty:int, stock:int, tax:float}> */
     public array $cart = [];
 
     public ?string $patient_id = null;
@@ -34,7 +35,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
     public ?int $admission_id = null;
 
-    public string $payment_method = 'cash';
+    /** Bank / cash account id the sale is paid into, or "ipd_credit" to post it to the IPD bill. */
+    public string $payment_method = '';
 
     public string $discount = '0';
 
@@ -42,6 +44,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
     public function mount(): void
     {
+        $this->payment_method = (string) BankAccount::cash()->id;
         if ($rxId = request()->integer('prescription')) {
             $this->loadPrescription($rxId);
         }
@@ -83,7 +86,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
             return;
         }
-        $price = (float) ($m->sellableBatches()->value('sale_price') ?: $m->sale_price);
+        $price = rupees($m->sellableBatches()->value('sale_price') ?: $m->sale_price);
         $this->cart[$m->id] = [
             'medicine_id' => $m->id, 'name' => $m->label, 'price' => $price,
             'qty' => min($stock, $existing + $qty), 'stock' => $stock, 'tax' => (float) $m->tax_percent, 'rx' => $m->requires_prescription,
@@ -119,7 +122,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
     public function clear(): void
     {
         $this->reset('cart', 'patient_id', 'patientLabel', 'customer_name', 'customer_phone', 'prescription_id', 'admission_id', 'discount', 'tendered');
-        $this->payment_method = 'cash';
+        $this->payment_method = (string) BankAccount::cash()->id;
     }
 
     public function updatedPatientId($id): void
@@ -127,7 +130,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         $p = Patient::with('currentAdmission')->find($id);
         $this->admission_id = $p?->currentAdmission?->id;
         if (! $this->admission_id && $this->payment_method === 'ipd_credit') {
-            $this->payment_method = 'cash';
+            $this->payment_method = (string) BankAccount::cash()->id;
         }
     }
 
@@ -138,12 +141,12 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         foreach ($this->cart as $line) {
             $gross = $line['price'] * $line['qty'];
             $subtotal += $gross;
-            $tax += round($gross * $line['tax'] / 100, 2);
+            $tax += rupees($gross * $line['tax'] / 100);
         }
-        $discount = min((float) $this->discount, $subtotal);
-        $total = round($subtotal - $discount + $tax, 2);
+        $discount = min(rupees($this->discount), $subtotal);
+        $total = $subtotal - $discount + $tax;
 
-        return compact('subtotal', 'tax', 'discount', 'total') + ['change' => max(0, (float) $this->tendered - $total)];
+        return compact('subtotal', 'tax', 'discount', 'total') + ['change' => max(0, rupees($this->tendered) - $total)];
     }
 
     public function checkout(PharmacyService $pharmacy): void
@@ -151,8 +154,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         $this->authorize('pharmacy.sell');
         $this->validate([
             'cart' => 'required|array|min:1',
-            'payment_method' => 'required|in:cash,card,online,ipd_credit',
-            'discount' => 'nullable|numeric|min:0',
+            'payment_method' => ['required', $this->payment_method === 'ipd_credit' ? 'in:ipd_credit' : bank_account_exists()],
+            'discount' => 'nullable|integer|min:0',
             'patient_id' => ['nullable', tenant_exists('patients')],
             'customer_name' => 'nullable|string|max:120',
         ], ['cart.required' => 'Add at least one medicine.']);
@@ -178,7 +181,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
                 'customer_phone' => $this->customer_phone ?: null,
                 'prescription_id' => $this->prescription_id,
                 'ipd_admission_id' => $this->admission_id,
-                'payment_method' => $this->payment_method,
+                'payment_method' => $this->payment_method === 'ipd_credit' ? 'ipd_credit' : null,
+                'bank_account_id' => $this->payment_method === 'ipd_credit' ? null : $this->payment_method,
                 'discount' => $totals['discount'],
             ]
         );
@@ -197,6 +201,7 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
             'totals' => $this->totals(),
             'prescription' => $this->prescription_id ? Prescription::with('doctor')->find($this->prescription_id) : null,
             'admission' => $this->admission_id ? IpdAdmission::with('bed.ward')->find($this->admission_id) : null,
+            'accounts' => BankAccount::active()->ordered()->get(),
         ];
     }
 }; ?>
@@ -284,20 +289,21 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
                     @error('cart')<div class="alert alert-danger py-2">{{ $message }}</div>@enderror
 
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ money($totals['subtotal']) }}</span></div>
-                    <div class="d-flex justify-content-between align-items-center my-1"><span>Discount</span><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.500ms="discount"></div>
+                    <div class="d-flex justify-content-between align-items-center my-1"><span>Discount</span><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm text-end" style="width: 110px;" wire:model.live.debounce.500ms="discount"></div>
                     <div class="d-flex justify-content-between"><span>Tax</span><span>{{ money($totals['tax']) }}</span></div>
                     <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-2 mt-2"><span>Total</span><span>{{ money($totals['total']) }}</span></div>
 
-                    <div class="btn-group w-100 my-3" role="group">
-                        @foreach (['cash' => 'Cash', 'card' => 'Card', 'online' => 'Online'] + ($admission_id ? ['ipd_credit' => 'IPD bill'] : []) as $k => $l)
+                    <div class="fs-12 text-muted mt-3 mb-1">Received in</div>
+                    <div class="d-flex flex-wrap gap-1 mb-3" role="group">
+                        @foreach ($accounts->mapWithKeys(fn ($a) => [$a->id => $a->label])->all() + ($admission_id ? ['ipd_credit' => 'IPD bill (credit)'] : []) as $k => $l)
                             <input type="radio" class="btn-check" id="pm-{{ $k }}" value="{{ $k }}" wire:model.live="payment_method">
-                            <label class="btn btn-outline-primary btn-sm" for="pm-{{ $k }}">{{ $l }}</label>
+                            <label class="btn btn-outline-primary btn-sm flex-fill" for="pm-{{ $k }}">{{ $l }}</label>
                         @endforeach
                     </div>
                     @error('payment_method')<div class="text-danger fs-12 mb-2">{{ $message }}</div>@enderror
-                    @if ($payment_method === 'cash')
+                    @if ($accounts->firstWhere('id', (int) $payment_method)?->isCash())
                         <div class="d-flex gap-2 align-items-center mb-3">
-                            <input type="number" step="0.01" class="form-control" placeholder="Amount tendered" wire:model.live.debounce.400ms="tendered">
+                            <input type="number" step="1" min="0" inputmode="numeric" class="form-control" placeholder="Amount tendered" wire:model.live.debounce.400ms="tendered">
                             <span class="text-nowrap">Change: <strong>{{ money($totals['change']) }}</strong></span>
                         </div>
                     @endif

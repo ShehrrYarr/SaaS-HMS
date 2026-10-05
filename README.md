@@ -36,6 +36,7 @@ access for its staff and a **patient portal**.
 | **Laboratory** | Test catalog with gender-specific & critical ranges, sample collection with **barcode labels**, result entry with live H/L flags, approval, **PDF report with signature image + QR verification** (+ optional PKCS#12 digitally signed PDF), QC log with trend chart, analyzer **device API** |
 | **Radiology** | Imaging catalog & worklist, scheduling, DICOM/image upload, radiologist reports, PACS viewer link (Study Instance UID) |
 | **Billing & finance** | Unified invoices (OPD, IPD, pharmacy, lab, radiology, OT, blood bank, services), payments & refunds, TPA cover & **insurance claims**, expenses, financial dashboard, ageing, doctor revenue, **tax/GST report CSV** |
+| **Banks & Cash** | One built-in Cash account plus any number of banks per hospital (opening balance, IBAN, branch). Every payment, refund, IPD deposit, pharmacy sale, insurance settlement, expense and salary is posted to the chosen account; live balances, statements with running balance (CSV/print), transfers and adjustments. Banks marked “show to patients” appear on invoices and in the portal |
 | **HR & payroll** | Staff directory (optional login creation), shifts & weekly roster, attendance, attendance-aware payroll, **doctor commission / fee splitting**, payslips |
 | **OT & blood bank** | OT scheduling with room-conflict check, surgical team, WHO-style pre/post-op checklists, charges to IPD bill; donors (90-day rule), TTI screening, component inventory, ABO/Rh-aware **cross-match** & issue |
 | **Telemedicine & portal** | Jitsi video rooms per appointment (Agora-ready), patient portal: appointments booking, reports & prescriptions download, history & vitals trend, bills with bank-transfer reporting, profile — login by **email/password or UHID/phone + OTP** |
@@ -66,7 +67,12 @@ active hospital on create. The scope **fails closed**: a web request without a t
 * **Plans → modules → permissions** (`config/hms.php`). A permission is only usable if its module is in the
   hospital’s plan; changing a plan re-syncs every role. Hospital Admin automatically has every permission in the plan.
 * Business rules live in `app/Services` (Billing, OPD, IPD, Pharmacy, Diagnostics, BloodBank, Payroll,
-  Subscription, HospitalProvisioner) and are shared by the UI, portal, API, scheduler and seeders.
+  Subscription, Ledger, HospitalProvisioner) and are shared by the UI, portal, API, scheduler and seeders.
+* **Money:** one currency, **Rs** (`config('hms.currency')`), and **whole rupees only**. Amount fields validate as
+  integers; computed tax/discount/commission is rounded to the nearest rupee with `rupees()`, and `money()` formats
+  `Rs 1,250`. Every movement of money goes through `LedgerService` into `bank_transactions`, so an account’s balance is
+  opening balance + money in − money out. Payment pickers list Cash and the hospital’s active banks
+  (`<x-form.account>`); credit options (pharmacy “IPD bill”, insurance cover) stay outside the ledger until settled.
 * Uploads are stored privately under `storage/app/private/hospitals/{id}/…` and streamed by `FileController`
   after an ownership check.
 

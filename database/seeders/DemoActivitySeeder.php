@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Appointment;
 use App\Models\Attendance;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Bed;
 use App\Models\BloodRequest;
 use App\Models\ClinicalNote;
@@ -27,6 +29,7 @@ use App\Models\Vital;
 use App\Services\BillingService;
 use App\Services\DiagnosticsService;
 use App\Services\IpdService;
+use App\Services\LedgerService;
 use App\Services\OpdService;
 use App\Services\PharmacyService;
 use App\Support\Sequence;
@@ -51,7 +54,13 @@ class DemoActivitySeeder
         $diag = app(DiagnosticsService::class);
         $ipd = app(IpdService::class);
         $pharmacy = app(PharmacyService::class);
+        $ledger = app(LedgerService::class);
         $doctors = Staff::doctors()->get();
+        $cash = BankAccount::cash();
+        $hbl = BankAccount::where('name', 'HBL')->first() ?? $cash;
+        $meezan = BankAccount::where('name', 'Meezan Bank')->first() ?? $cash;
+        // Ledger lines are written "now"; move them to when the demo event happened.
+        $backdate = fn ($source, $at) => BankTransaction::where('source_type', $source->getMorphClass())->where('source_id', $source->getKey())->update(['transacted_at' => $at]);
         $patients = Patient::orderBy('id')->get();
 
         // ---- 14 days of OPD history (feeds dashboard & finance charts)
@@ -65,8 +74,9 @@ class DemoActivitySeeder
                     $invoice = Invoice::find($visit->invoice_id);
                     $invoice->update(['invoice_date' => $when->toDateString(), 'created_at' => $when]);
                     if ($n % 4 !== 0) {
-                        $payment = $billing->addPayment($invoice, $invoice->balance, $n % 2 ? 'cash' : 'card');
+                        $payment = $billing->addPayment($invoice, $invoice->balance, $n % 2 ? $cash : $hbl);
                         $payment->update(['paid_at' => $when]);
+                        $backdate($payment, $when);
                     }
                 }
             }
@@ -116,21 +126,25 @@ class DemoActivitySeeder
         auth()->setUser($reception);
         $beds = Bed::where('status', 'available')->whereHas('ward', fn ($q) => $q->whereIn('type', ['general', 'private']))->take(2)->get();
         if ($beds->count() === 2) {
-            $current = $ipd->admit($patients[3], ['doctor_id' => $doctors[1]->id, 'bed_id' => $beds[0]->id, 'admission_type' => 'emergency', 'reason' => 'Community acquired pneumonia', 'provisional_diagnosis' => 'CAP – right lower lobe', 'deposit_amount' => 300]);
+            $current = $ipd->admit($patients[3], ['doctor_id' => $doctors[1]->id, 'bed_id' => $beds[0]->id, 'admission_type' => 'emergency', 'reason' => 'Community acquired pneumonia', 'provisional_diagnosis' => 'CAP – right lower lobe', 'deposit_amount' => 20000, 'deposit_account_id' => $cash->id]);
             $current->update(['admitted_at' => now()->subDays(2)]);
+            $backdate($current, now()->subDays(2));
             $current->allocations()->update(['from_at' => now()->subDays(2)]);
-            $ipd->addCharge($current, ['category' => 'nursing', 'description' => 'Nursing Care (per day)', 'quantity' => 2, 'unit_price' => 25]);
-            $ipd->addCharge($current, ['category' => 'doctor_visit', 'description' => 'Doctor Visit (IPD)', 'quantity' => 2, 'unit_price' => 30, 'doctor_id' => $doctors[1]->id]);
+            $ipd->addCharge($current, ['category' => 'nursing', 'description' => 'Nursing Care (per day)', 'quantity' => 2, 'unit_price' => 2000]);
+            $ipd->addCharge($current, ['category' => 'doctor_visit', 'description' => 'Doctor Visit (IPD)', 'quantity' => 2, 'unit_price' => 2500, 'doctor_id' => $doctors[1]->id]);
             Vital::create(['patient_id' => $current->patient_id, 'visitable_type' => $current->getMorphClass(), 'visitable_id' => $current->id, 'bp_systolic' => 118, 'bp_diastolic' => 76, 'pulse' => 104, 'temperature' => 38.4, 'spo2' => 92, 'respiratory_rate' => 24, 'recorded_by' => $reception->id, 'recorded_at' => now()->subHours(5)]);
             $pharmacy->sell([['medicine_id' => Medicine::where('name', 'like', 'Ceftriaxone%')->value('id'), 'quantity' => 4], ['medicine_id' => Medicine::where('name', 'like', 'Normal Saline%')->value('id'), 'quantity' => 6]],
                 ['patient_id' => $current->patient_id, 'ipd_admission_id' => $current->id, 'payment_method' => 'ipd_credit']);
 
-            $past = $ipd->admit($patients[6], ['doctor_id' => $doctors[0]->id, 'bed_id' => $beds[1]->id, 'admission_type' => 'planned', 'reason' => 'Chest pain evaluation', 'deposit_amount' => 100]);
+            $past = $ipd->admit($patients[6], ['doctor_id' => $doctors[0]->id, 'bed_id' => $beds[1]->id, 'admission_type' => 'planned', 'reason' => 'Chest pain evaluation', 'deposit_amount' => 10000, 'deposit_account_id' => $meezan->id]);
             $past->update(['admitted_at' => now()->subDays(5)]);
+            $backdate($past, now()->subDays(5));
             $past->allocations()->update(['from_at' => now()->subDays(5)]);
-            $ipd->addCharge($past, ['category' => 'procedure', 'description' => 'ECG', 'unit_price' => 15]);
+            $ipd->addCharge($past, ['category' => 'procedure', 'description' => 'ECG', 'unit_price' => 1000]);
             $final = $ipd->discharge($past, ['discharge_type' => 'normal', 'discharge_summary' => "Admitted with atypical chest pain. Serial ECGs and troponins negative.\nManaged conservatively; pain resolved.", 'discharge_condition' => 'Stable, ambulatory.', 'discharge_instructions' => 'Tab Amlodipine 5mg once daily. Low-salt diet.', 'follow_up_date' => today()->addDays(10)]);
-            $billing->addPayment($final, $final->balance, 'card');
+            if ($final->balance > 0) {
+                $billing->addPayment($final, $final->balance, $meezan, 'Online transfer');
+            }
             $past->bed?->update(['status' => 'available']);
         }
 
@@ -138,25 +152,32 @@ class DemoActivitySeeder
         foreach (range(1, 6) as $i) {
             $meds = Medicine::withStock()->get()->filter(fn ($m) => (int) $m->stock > 20 && ! $m->requires_prescription)->random(2);
             $sale = $pharmacy->sell($meds->map(fn ($m) => ['medicine_id' => $m->id, 'quantity' => random_int(1, 3)])->values()->all(),
-                ['customer_name' => fake()->name(), 'payment_method' => $i % 3 ? 'cash' : 'card']);
-            $sale->update(['created_at' => now()->subDays(random_int(0, 6))->setTime(random_int(9, 19), random_int(0, 59))]);
+                ['customer_name' => fake()->name(), 'bank_account_id' => ($i % 3 ? $cash : $hbl)->id]);
+            $sale->update(['created_at' => $soldAt = now()->subDays(random_int(0, 6))->setTime(random_int(9, 19), random_int(0, 59))]);
+            $backdate($sale, $soldAt);
         }
 
         // ---- Insurance claim for an insured patient's invoice
         $insured = $patients->firstWhere('tpa_id', '!=', null);
         if ($insured) {
-            $inv = $billing->createInvoice($insured, [['service_type' => 'service', 'description' => 'Health check package', 'unit_price' => 180]]);
-            $inv->update(['insurance_amount' => 150]);
+            $inv = $billing->createInvoice($insured, [['service_type' => 'service', 'description' => 'Health check package', 'unit_price' => 8000]]);
+            $inv->update(['insurance_amount' => 6000]);
             $inv->recalculate();
             InsuranceClaim::create(['claim_no' => Sequence::code('claim', 'CLM'), 'tpa_id' => $insured->tpa_id, 'patient_id' => $insured->id, 'invoice_id' => $inv->id,
-                'policy_no' => $insured->insurance_policy_no, 'claim_amount' => 150, 'status' => 'submitted', 'submitted_at' => today()->subDay(), 'created_by' => $reception->id]);
+                'policy_no' => $insured->insurance_policy_no, 'claim_amount' => 6000, 'status' => 'submitted', 'submitted_at' => today()->subDay(), 'created_by' => $reception->id]);
         }
 
         // ---- Expenses this month
         $cats = ExpenseCategory::pluck('id', 'name');
-        foreach ([['Electricity bill', 'Utilities', 820], ['Generator fuel', 'Utilities', 240], ['Building rent', 'Rent', 4500], ['AC servicing', 'Maintenance', 310], ['Gloves & syringes', 'Medical Supplies', 690], ['Staff refreshments', 'Miscellaneous', 95]] as $i => [$title, $cat, $amount]) {
-            Expense::create(['expense_category_id' => $cats[$cat] ?? null, 'title' => $title, 'amount' => $amount, 'expense_date' => today()->startOfMonth()->addDays(min($i * 3, today()->day - 1))->toDateString(), 'paid_to' => fake()->company(), 'payment_method' => $i % 2 ? 'bank_transfer' : 'cash', 'created_by' => $reception->id]);
+        foreach ([['Electricity bill', 'Utilities', 85000, $hbl], ['Generator fuel', 'Utilities', 32000, $cash], ['Building rent', 'Rent', 450000, $hbl],
+            ['AC servicing', 'Maintenance', 18000, $cash], ['Gloves & syringes', 'Medical Supplies', 42000, $meezan], ['Staff refreshments', 'Miscellaneous', 6500, $cash]] as $i => [$title, $cat, $amount, $account]) {
+            $expense = Expense::create(['expense_category_id' => $cats[$cat] ?? null, 'title' => $title, 'amount' => $amount, 'expense_date' => today()->startOfMonth()->addDays(min($i * 3, today()->day - 1))->toDateString(),
+                'paid_to' => fake()->company(), 'payment_method' => $account->type, 'bank_account_id' => $account->id, 'created_by' => $reception->id]);
+            $ledger->postExpense($expense);
         }
+
+        // ---- Yesterday's cash deposited into the bank
+        $ledger->transfer($cash, $hbl, 40000, 'Daily cash deposit', now()->subDay()->setTime(17, 30));
 
         // ---- Attendance today
         foreach (Staff::active()->get() as $i => $s) {
@@ -168,7 +189,7 @@ class DemoActivitySeeder
         $surgeon = $doctors->firstWhere('specialization', 'Orthopedics') ?? $doctors->first();
         $otPatient = $patients[9];
         Surgery::create(['surgery_no' => Sequence::code('surgery', 'OT'), 'patient_id' => $otPatient->id, 'ot_room_id' => $room->id, 'procedure_name' => 'Arthroscopic knee meniscectomy', 'surgery_type' => 'major',
-            'scheduled_start' => today()->addDay()->setTime(9, 0), 'scheduled_end' => today()->addDay()->setTime(11, 0), 'status' => 'scheduled', 'surgeon_id' => $surgeon->id, 'anesthesia_type' => 'spinal', 'charges' => 1200, 'created_by' => $reception->id]);
+            'scheduled_start' => today()->addDay()->setTime(9, 0), 'scheduled_end' => today()->addDay()->setTime(11, 0), 'status' => 'scheduled', 'surgeon_id' => $surgeon->id, 'anesthesia_type' => 'spinal', 'charges' => 85000, 'created_by' => $reception->id]);
         BloodRequest::create(['request_no' => Sequence::code('blood-request', 'BRQ'), 'patient_id' => $patients[3]->id, 'blood_group' => $patients[3]->blood_group ?? 'O+', 'component' => 'prbc', 'units' => 1, 'priority' => 'urgent', 'status' => 'pending', 'notes' => 'Hb 7.8 g/dL', 'requested_by' => $reception->id]);
 
         auth()->forgetUser();

@@ -79,7 +79,7 @@ new #[Layout('layouts.app')] #[Title('Lab Test Catalog')] class extends Componen
             'form.name' => 'required|string|max:150',
             'form.sample_type' => 'required|string|max:30',
             'form.container' => 'nullable|string|max:50',
-            'form.price' => 'required|numeric|min:0',
+            'form.price' => 'required|integer|min:0',
             'form.turnaround_hours' => 'required|integer|min:1|max:2000',
             'form.method' => 'nullable|string|max:100',
             'form.description' => 'nullable|string|max:1000',
@@ -165,7 +165,7 @@ new #[Layout('layouts.app')] #[Title('Lab Test Catalog')] class extends Componen
             </div>
             <x-form.select class="col-md-3" label="Sample" model="form.sample_type" :options="['blood' => 'Blood', 'serum' => 'Serum', 'plasma' => 'Plasma', 'urine' => 'Urine', 'stool' => 'Stool', 'swab' => 'Swab', 'sputum' => 'Sputum', 'csf' => 'CSF', 'tissue' => 'Tissue', 'other' => 'Other']" :placeholder="false" />
             <x-form.input class="col-md-3" label="Container" model="form.container" />
-            <x-form.input class="col-md-2" label="Price" model="form.price" type="number" step="0.01" required />
+            <x-form.money class="col-md-2" label="Price" model="form.price" required />
             <x-form.input class="col-md-2" label="TAT (hours)" model="form.turnaround_hours" type="number" />
             <x-form.input class="col-md-2" label="Method" model="form.method" />
         </div>

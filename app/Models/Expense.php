@@ -17,8 +17,8 @@ class Expense extends Model
     {
         return [
             'expense_date' => 'date',
-            'amount' => 'decimal:2',
-            'tax_amount' => 'decimal:2',
+            'amount' => 'integer',
+            'tax_amount' => 'integer',
         ];
     }
 
@@ -30,5 +30,10 @@ class Expense extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
     }
 }

@@ -57,7 +57,7 @@ new #[Layout('layouts.app')] #[Title('OPD Visits')] class extends Component
             'form.doctor_id' => ['required', doctor_exists()],
             'form.visit_type' => 'nullable|in:new,follow_up,emergency',
             'form.chief_complaint' => 'nullable|string|max:200',
-            'form.fee' => 'nullable|numeric|min:0',
+            'form.fee' => 'nullable|integer|min:0',
         ], [], ['form.patient_id' => 'patient', 'form.doctor_id' => 'doctor']);
 
         $visit = $opd->createVisit(Patient::findOrFail($this->form['patient_id']), Staff::doctors()->findOrFail($this->form['doctor_id']), array_filter([
@@ -140,7 +140,7 @@ new #[Layout('layouts.app')] #[Title('OPD Visits')] class extends Component
         <x-form.search-select label="Doctor" model="form.doctor_id" :options="$doctors" required />
         <div class="row">
             <x-form.select class="col-md-6" label="Visit type" model="form.visit_type" :options="['new' => 'New', 'follow_up' => 'Follow-up', 'emergency' => 'Emergency']" placeholder="Auto-detect" />
-            <x-form.input class="col-md-6" label="Fee override" model="form.fee" type="number" step="0.01" placeholder="Doctor's fee" />
+            <x-form.money class="col-md-6" label="Fee override" model="form.fee" placeholder="Doctor's fee" />
         </div>
         <x-form.input label="Chief complaint" model="form.chief_complaint" />
         <x-slot:footer>

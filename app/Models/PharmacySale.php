@@ -17,11 +17,11 @@ class PharmacySale extends Model
     protected function casts(): array
     {
         return [
-            'subtotal' => 'decimal:2',
-            'discount' => 'decimal:2',
-            'tax' => 'decimal:2',
-            'total' => 'decimal:2',
-            'paid_amount' => 'decimal:2',
+            'subtotal' => 'integer',
+            'discount' => 'integer',
+            'tax' => 'integer',
+            'total' => 'integer',
+            'paid_amount' => 'integer',
         ];
     }
 
@@ -48,5 +48,16 @@ class PharmacySale extends Model
     public function admission(): BelongsTo
     {
         return $this->belongsTo(IpdAdmission::class, 'ipd_admission_id');
+    }
+
+    /** "Cash", "HBL · ****1234" or "IPD bill". */
+    public function paymentLabel(): string
+    {
+        return $this->payment_method === 'ipd_credit' ? 'IPD bill' : ($this->account?->label ?? label($this->payment_method));
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
     }
 }

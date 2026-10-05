@@ -59,7 +59,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
             'charge.category' => 'required|in:nursing,doctor_visit,procedure,consumable,medicine,other',
             'charge.description' => 'required|string|max:200',
             'charge.quantity' => 'required|numeric|min:0.01',
-            'charge.unit_price' => 'required|numeric|min:0',
+            'charge.unit_price' => 'required|integer|min:0',
             'charge.doctor_id' => ['nullable', tenant_exists('staff')],
         ]);
         $ipd->addCharge($this->admission, $this->charge + ['doctor_id' => $this->charge['doctor_id'] ?: null]);
@@ -186,7 +186,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                 <x-form.select class="col-md-2 mb-0" label="Category" model="charge.category" :options="['nursing' => 'Nursing', 'doctor_visit' => 'Doctor visit', 'procedure' => 'Procedure', 'consumable' => 'Consumable', 'medicine' => 'Medicine', 'other' => 'Other']" :placeholder="false" />
                                 <x-form.input class="col-md-3 mb-0" label="Description" model="charge.description" />
                                 <x-form.input class="col-md-1 mb-0" label="Qty" model="charge.quantity" type="number" step="0.5" />
-                                <x-form.input class="col-md-1 mb-0" label="Price" model="charge.unit_price" type="number" step="0.01" />
+                                <x-form.money class="col-md-1 mb-0" label="Price" model="charge.unit_price" />
                                 <x-form.select class="col-md-1 mb-0" label="Doctor" model="charge.doctor_id" :options="$doctors" placeholder="—" />
                                 <div class="col-md-1"><button class="btn btn-primary w-100" wire:click="addCharge"><i class="ri-add-line"></i></button></div>
                             </div>

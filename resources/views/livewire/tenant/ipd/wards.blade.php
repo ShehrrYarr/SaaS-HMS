@@ -50,7 +50,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
             'ward.name' => 'required|string|max:100',
             'ward.type' => 'required|in:'.implode(',', array_keys(Ward::TYPES)),
             'ward.floor' => 'nullable|string|max:30',
-            'ward.charge_per_day' => 'required|numeric|min:0',
+            'ward.charge_per_day' => 'required|integer|min:0',
             'ward.description' => 'nullable|string|max:500',
             'ward.is_active' => 'boolean',
         ])['ward'];
@@ -72,7 +72,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
     public function saveBeds(): void
     {
         $this->authorize('beds.manage');
-        $this->validate(['prefix' => 'required|string|max:10', 'count' => 'required|integer|min:1|max:100', 'bedCharge' => 'nullable|numeric|min:0']);
+        $this->validate(['prefix' => 'required|string|max:10', 'count' => 'required|integer|min:1|max:100', 'bedCharge' => 'nullable|integer|min:0']);
         $ward = Ward::findOrFail($this->bedWardId);
         $existing = $ward->beds()->pluck('bed_no')->all();
         $n = 1;
@@ -143,7 +143,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
         <div class="row">
             <x-form.select class="col-md-6" label="Type" model="ward.type" :options="$types" :placeholder="false" />
             <x-form.input class="col-md-3" label="Floor" model="ward.floor" />
-            <x-form.input class="col-md-3" label="Charge/day" model="ward.charge_per_day" type="number" step="0.01" />
+            <x-form.money class="col-md-3" label="Charge/day" model="ward.charge_per_day" />
         </div>
         <x-form.textarea label="Description" model="ward.description" rows="2" />
         <x-form.switch label="Active" model="ward.is_active" />
@@ -154,7 +154,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
         <div class="row">
             <x-form.input class="col-md-4" label="Prefix" model="prefix" />
             <x-form.input class="col-md-4" label="How many" model="count" type="number" min="1" />
-            <x-form.input class="col-md-4" label="Charge override" model="bedCharge" type="number" step="0.01" placeholder="Ward rate" />
+            <x-form.money class="col-md-4" label="Charge override" model="bedCharge" placeholder="Ward rate" />
         </div>
         <p class="text-muted fs-12 mb-0">Beds are numbered {{ $prefix }}01, {{ $prefix }}02 … skipping existing numbers.</p>
         <x-slot:footer><button class="btn btn-light" x-on:click="show = false">Cancel</button><button class="btn btn-primary" wire:click="saveBeds">Add beds</button></x-slot:footer>

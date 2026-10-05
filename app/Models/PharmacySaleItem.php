@@ -12,6 +12,15 @@ class PharmacySaleItem extends Model
 
     protected $guarded = ['id', 'hospital_id'];
 
+    protected function casts(): array
+    {
+        return [
+            'unit_price' => 'integer',
+            'discount' => 'integer',
+            'total' => 'integer',
+        ];
+    }
+
     public function sale(): BelongsTo
     {
         return $this->belongsTo(PharmacySale::class, 'pharmacy_sale_id');

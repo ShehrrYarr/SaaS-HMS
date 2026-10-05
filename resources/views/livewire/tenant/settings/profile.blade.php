@@ -3,7 +3,6 @@
 use App\Livewire\Concerns\GuardsDemo;
 use App\Livewire\Concerns\Toasts;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -26,13 +25,12 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
     public function mount(): void
     {
         $h = hospital();
-        $this->form = collect($h->only(['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'postal_code', 'registration_no', 'tax_no', 'currency', 'timezone', 'tax_label', 'tax_rate', 'uhid_prefix']))->map(fn ($v) => (string) $v)->all();
+        $this->form = collect($h->only(['name', 'email', 'phone', 'address', 'city', 'state', 'country', 'postal_code', 'registration_no', 'tax_no', 'timezone', 'tax_label', 'tax_rate', 'uhid_prefix']))->map(fn ($v) => (string) $v)->all();
         $this->settings = [
             'invoice_footer' => (string) $h->setting('invoice_footer', ''),
             'report_footer' => (string) $h->setting('report_footer', ''),
             'pacs_viewer_url' => (string) $h->setting('pacs_viewer_url', ''),
             'prescription_header' => (string) $h->setting('prescription_header', ''),
-            'bank_details' => (string) $h->setting('bank_details', ''),
         ];
     }
 
@@ -53,7 +51,6 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
             'form.postal_code' => 'nullable|string|max:20',
             'form.registration_no' => 'nullable|string|max:100',
             'form.tax_no' => 'nullable|string|max:100',
-            'form.currency' => ['required', Rule::in(array_keys(config('hms.currencies')))],
             'form.timezone' => 'required|timezone',
             'form.tax_label' => 'required|string|max:30',
             'form.tax_rate' => 'required|numeric|min:0|max:100',
@@ -62,7 +59,6 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
             'settings.report_footer' => 'nullable|string|max:255',
             'settings.pacs_viewer_url' => 'nullable|url|max:255',
             'settings.prescription_header' => 'nullable|string|max:255',
-            'settings.bank_details' => 'nullable|string|max:1000',
             'logo' => 'nullable|image|max:2048',
         ])['form'];
 
@@ -108,7 +104,6 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
     public function with(): array
     {
         return [
-            'currencies' => collect(config('hms.currencies'))->mapWithKeys(fn ($s, $c) => [$c => "$c ($s)"])->all(),
             'timezones' => collect(timezone_identifiers_list())->mapWithKeys(fn ($t) => [$t => $t])->all(),
         ];
     }
@@ -137,8 +132,7 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
             <div class="card">
                 <div class="card-header"><h6 class="card-title mb-0">Localisation &amp; tax</h6></div>
                 <div class="card-body row">
-                    <x-form.select class="col-md-3" label="Currency" model="form.currency" :options="$currencies" :placeholder="false" />
-                    <x-form.search-select class="col-md-5" label="Timezone" model="form.timezone" :options="$timezones" />
+                    <x-form.search-select class="col-md-8" label="Timezone" model="form.timezone" :options="$timezones" />
                     <x-form.input class="col-md-2" label="Tax label" model="form.tax_label" placeholder="GST / VAT" />
                     <x-form.input class="col-md-2" label="Default tax %" model="form.tax_rate" type="number" step="0.01" />
                 </div>
@@ -149,7 +143,6 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
                     <x-form.input class="col-12" label="Prescription header line" model="settings.prescription_header" placeholder="e.g. 24/7 Emergency: +1 555 0100" />
                     <x-form.input class="col-md-6" label="Invoice footer" model="settings.invoice_footer" />
                     <x-form.input class="col-md-6" label="Lab report footer" model="settings.report_footer" />
-                    <x-form.textarea class="col-12" label="Bank details for patient payments (shown in the patient portal)" model="settings.bank_details" rows="3" />
                     <x-form.input class="col-12" label="PACS viewer URL" model="settings.pacs_viewer_url" placeholder="https://pacs.example.com/viewer?StudyInstanceUIDs={uid}" hint="{uid} is replaced by the DICOM Study Instance UID (e.g. OHIF viewer)." />
                     <div class="col-12"><button class="btn btn-primary" wire:click="save" wire:loading.attr="disabled">Save settings</button></div>
                 </div>

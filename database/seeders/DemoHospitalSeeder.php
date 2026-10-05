@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Appointment;
+use App\Models\BankAccount;
 use App\Models\Bed;
 use App\Models\BloodBag;
 use App\Models\BloodDonor;
@@ -45,7 +46,7 @@ class DemoHospitalSeeder extends Seeder
 
         app(HospitalProvisioner::class)->create([
             'name' => 'Sunrise Clinic', 'slug' => 'sunrise-clinic', 'code' => 'SRC',
-            'email' => 'hello@sunrise.test', 'city' => 'Riverside', 'country' => 'United States', 'currency' => 'USD',
+            'email' => 'hello@sunrise.test', 'city' => 'Karachi', 'country' => 'Pakistan', 'timezone' => 'Asia/Karachi',
         ], ['name' => 'Sunrise Admin', 'email' => 'admin@sunrise.test', 'password' => 'password'], $basic, 'monthly', true);
     }
 
@@ -58,17 +59,24 @@ class DemoHospitalSeeder extends Seeder
 
         $hospital = $provisioner->create([
             'name' => 'City General Hospital', 'slug' => 'city-hospital', 'code' => 'CGH',
-            'email' => 'info@cityhospital.test', 'phone' => '+1 555 0100', 'address' => '125 Main Street',
-            'city' => 'Springfield', 'state' => 'IL', 'country' => 'United States', 'postal_code' => '62701',
-            'registration_no' => 'REG-2026-0042', 'tax_no' => 'TX-998877',
-            'currency' => 'USD', 'timezone' => 'UTC', 'tax_label' => 'Tax', 'tax_rate' => 5, 'uhid_prefix' => 'CGH',
+            'email' => 'info@cityhospital.test', 'phone' => '+92 42 3570 0100', 'address' => '125 Main Boulevard, Gulberg III',
+            'city' => 'Lahore', 'state' => 'Punjab', 'country' => 'Pakistan', 'postal_code' => '54660',
+            'registration_no' => 'PHC-R-2026-0042', 'tax_no' => 'NTN-4459987-1',
+            'timezone' => 'Asia/Karachi', 'tax_label' => 'Tax', 'tax_rate' => 5, 'uhid_prefix' => 'CGH',
             'settings' => ['queue_display_key' => Str::random(24), 'invoice_footer' => 'Get well soon!'],
         ], ['name' => 'Hospital Administrator', 'email' => 'admin@cityhospital.test', 'password' => 'password'], $plan, 'yearly', false);
 
-        tenancy()->run($hospital, function () use ($hospital) {
-            $this->seedHospital($hospital);
-            (new DemoActivitySeeder)->seed($hospital);
-        });
+        // Seed in the hospital's own timezone so "today" in the data matches "today" in the app.
+        $timezone = date_default_timezone_get();
+        date_default_timezone_set($hospital->timezone);
+        try {
+            tenancy()->run($hospital, function () use ($hospital) {
+                $this->seedHospital($hospital);
+                (new DemoActivitySeeder)->seed($hospital);
+            });
+        } finally {
+            date_default_timezone_set($timezone);
+        }
 
         return $hospital;
     }
@@ -77,18 +85,26 @@ class DemoHospitalSeeder extends Seeder
     {
         $dept = Department::pluck('id', 'name');
 
+        // ---------------------------------------------------------- banks & cash
+        $opened = today()->subDays(30)->toDateString();
+        BankAccount::cash()->update(['opening_balance' => 150000, 'opening_date' => $opened]);
+        BankAccount::create(['type' => 'bank', 'name' => 'HBL', 'account_title' => $hospital->name, 'account_number' => '0042 7900 1234 03', 'iban' => 'PK36HABB0004279001234503',
+            'branch' => 'Gulberg Branch, Lahore', 'opening_balance' => 1500000, 'opening_date' => $opened, 'show_to_patients' => true]);
+        BankAccount::create(['type' => 'bank', 'name' => 'Meezan Bank', 'account_title' => $hospital->name, 'account_number' => '0210 0104 5566 77', 'iban' => 'PK24MEZN0002100104556677',
+            'branch' => 'Main Boulevard, Lahore', 'opening_balance' => 850000, 'opening_date' => $opened, 'show_to_patients' => true]);
+
         // ---------------------------------------------------------- staff
         $doctors = [];
         foreach ([
-            ['Sarah Ahmed', 'doctor@cityhospital.test', 'Cardiology', 'Cardiologist', 'MBBS, FCPS (Cardiology)', 60, 40, 20],
-            ['James Wilson', 'doctor2@cityhospital.test', 'General Medicine', 'Consultant Physician', 'MBBS, MD', 40, 25, 15],
-            ['Emily Chen', null, 'Pediatrics', 'Pediatrician', 'MBBS, DCH', 45, 30, 15],
-            ['Michael Brown', null, 'Orthopedics', 'Orthopedic Surgeon', 'MBBS, MS (Ortho)', 70, 45, 25],
+            ['Sarah Ahmed', 'doctor@cityhospital.test', 'Cardiology', 'Cardiologist', 'MBBS, FCPS (Cardiology)', 3000, 2000, 20],
+            ['James Wilson', 'doctor2@cityhospital.test', 'General Medicine', 'Consultant Physician', 'MBBS, MD', 2000, 1200, 15],
+            ['Emily Chen', null, 'Pediatrics', 'Pediatrician', 'MBBS, DCH', 2500, 1500, 15],
+            ['Michael Brown', null, 'Orthopedics', 'Orthopedic Surgeon', 'MBBS, MS (Ortho)', 3500, 2500, 25],
         ] as [$name, $email, $department, $designation, $qualification, $fee, $followUp, $commission]) {
             $doctors[] = $this->staff($name, $email, 'Doctor', [
                 'staff_type' => 'doctor', 'department_id' => $dept[$department] ?? null, 'designation' => $designation,
                 'qualification' => $qualification, 'specialization' => $department, 'license_no' => 'PMC-'.random_int(10000, 99999),
-                'consultation_fee' => $fee, 'follow_up_fee' => $followUp, 'commission_percent' => $commission, 'basic_salary' => 6000,
+                'consultation_fee' => $fee, 'follow_up_fee' => $followUp, 'commission_percent' => $commission, 'basic_salary' => 250000,
             ]);
         }
 
@@ -103,14 +119,14 @@ class DemoHospitalSeeder extends Seeder
             }
         }
 
-        $this->staff('Grace Miller', 'nurse@cityhospital.test', 'Nurse', ['staff_type' => 'nurse', 'designation' => 'Staff Nurse', 'basic_salary' => 2500]);
-        $this->staff('Olivia Davis', 'reception@cityhospital.test', 'Receptionist', ['staff_type' => 'receptionist', 'designation' => 'Front Desk Officer', 'basic_salary' => 1800]);
-        $this->staff('Daniel Lee', 'pharmacist@cityhospital.test', 'Pharmacist', ['staff_type' => 'pharmacist', 'department_id' => $dept['Pharmacy'] ?? null, 'designation' => 'Chief Pharmacist', 'basic_salary' => 3000]);
-        $this->staff('Aisha Khan', 'lab@cityhospital.test', 'Lab Technician', ['staff_type' => 'lab_technician', 'department_id' => $dept['Pathology'] ?? null, 'designation' => 'Senior Lab Technologist', 'basic_salary' => 2600]);
-        $this->staff('Robert Taylor', 'radiology@cityhospital.test', 'Radiologist', ['staff_type' => 'radiologist', 'department_id' => $dept['Radiology'] ?? null, 'designation' => 'Consultant Radiologist', 'basic_salary' => 5500]);
-        $this->staff('Linda Martinez', 'accounts@cityhospital.test', 'Accountant', ['staff_type' => 'accountant', 'designation' => 'Accounts Manager', 'basic_salary' => 3200]);
-        $this->staff('Kevin Moore', 'hr@cityhospital.test', 'HR Manager', ['staff_type' => 'hr', 'designation' => 'HR Manager', 'basic_salary' => 3100]);
-        $this->staff('Peter Clark', null, null, ['staff_type' => 'support', 'designation' => 'Ward Assistant', 'basic_salary' => 1200]);
+        $this->staff('Grace Miller', 'nurse@cityhospital.test', 'Nurse', ['staff_type' => 'nurse', 'designation' => 'Staff Nurse', 'basic_salary' => 60000]);
+        $this->staff('Olivia Davis', 'reception@cityhospital.test', 'Receptionist', ['staff_type' => 'receptionist', 'designation' => 'Front Desk Officer', 'basic_salary' => 45000]);
+        $this->staff('Daniel Lee', 'pharmacist@cityhospital.test', 'Pharmacist', ['staff_type' => 'pharmacist', 'department_id' => $dept['Pharmacy'] ?? null, 'designation' => 'Chief Pharmacist', 'basic_salary' => 80000]);
+        $this->staff('Aisha Khan', 'lab@cityhospital.test', 'Lab Technician', ['staff_type' => 'lab_technician', 'department_id' => $dept['Pathology'] ?? null, 'designation' => 'Senior Lab Technologist', 'basic_salary' => 65000]);
+        $this->staff('Robert Taylor', 'radiology@cityhospital.test', 'Radiologist', ['staff_type' => 'radiologist', 'department_id' => $dept['Radiology'] ?? null, 'designation' => 'Consultant Radiologist', 'basic_salary' => 200000]);
+        $this->staff('Linda Martinez', 'accounts@cityhospital.test', 'Accountant', ['staff_type' => 'accountant', 'designation' => 'Accounts Manager', 'basic_salary' => 90000]);
+        $this->staff('Kevin Moore', 'hr@cityhospital.test', 'HR Manager', ['staff_type' => 'hr', 'designation' => 'HR Manager', 'basic_salary' => 85000]);
+        $this->staff('Peter Clark', null, null, ['staff_type' => 'support', 'designation' => 'Ward Assistant', 'basic_salary' => 35000]);
 
         // ---------------------------------------------------------- master data
         foreach ([['Morning', '08:00', '16:00', 'success'], ['Evening', '16:00', '00:00', 'warning'], ['Night', '00:00', '08:00', 'info']] as [$n, $s, $e, $c]) {
@@ -122,16 +138,16 @@ class DemoHospitalSeeder extends Seeder
         }
 
         foreach ([
-            ['REG', 'Registration Fee', 'registration', 5], ['ECG', 'ECG', 'procedure', 15], ['DRS', 'Dressing (small)', 'procedure', 10],
-            ['INJ', 'Injection Administration', 'procedure', 5], ['NEB', 'Nebulization', 'procedure', 8], ['AMB', 'Ambulance (within city)', 'transport', 40],
-            ['NRS', 'Nursing Care (per day)', 'nursing', 25], ['DVC', 'Doctor Visit (IPD)', 'consultation', 30], ['O2', 'Oxygen (per hour)', 'consumable', 6],
+            ['REG', 'Registration Fee', 'registration', 300], ['ECG', 'ECG', 'procedure', 1000], ['DRS', 'Dressing (small)', 'procedure', 500],
+            ['INJ', 'Injection Administration', 'procedure', 200], ['NEB', 'Nebulization', 'procedure', 400], ['AMB', 'Ambulance (within city)', 'transport', 2500],
+            ['NRS', 'Nursing Care (per day)', 'nursing', 2000], ['DVC', 'Doctor Visit (IPD)', 'consultation', 2500], ['O2', 'Oxygen (per hour)', 'consumable', 500],
         ] as [$code, $name, $cat, $price]) {
             ServiceCharge::create(['code' => $code, 'name' => $name, 'category' => $cat, 'price' => $price]);
         }
 
         foreach ([
-            ['General Ward', 'general', 'Ground', 50, 10, 'GW'], ['ICU', 'icu', '1st', 300, 4, 'ICU'], ['Private Rooms', 'private', '2nd', 150, 5, 'PR'],
-            ['Semi-Private', 'semi_private', '2nd', 90, 4, 'SP'], ['Emergency', 'emergency', 'Ground', 80, 3, 'ER'], ['NICU', 'nicu', '1st', 250, 2, 'NICU'],
+            ['General Ward', 'general', 'Ground', 3000, 10, 'GW'], ['ICU', 'icu', '1st', 25000, 4, 'ICU'], ['Private Rooms', 'private', '2nd', 12000, 5, 'PR'],
+            ['Semi-Private', 'semi_private', '2nd', 7000, 4, 'SP'], ['Emergency', 'emergency', 'Ground', 5000, 3, 'ER'], ['NICU', 'nicu', '1st', 20000, 2, 'NICU'],
         ] as [$name, $type, $floor, $charge, $count, $prefix]) {
             $ward = Ward::create(['name' => $name, 'type' => $type, 'floor' => $floor, 'charge_per_day' => $charge]);
             for ($b = 1; $b <= $count; $b++) {
@@ -152,26 +168,26 @@ class DemoHospitalSeeder extends Seeder
             ->mapWithKeys(fn ($n) => [$n => MedicineCategory::create(['name' => $n])->id]);
 
         $medicines = [
-            ['Panadol 500mg', 'Paracetamol', 'Analgesics', 'tablet', '500mg', 'strip', 0.80, 1.20, false],
-            ['Brufen 400mg', 'Ibuprofen', 'Analgesics', 'tablet', '400mg', 'strip', 1.10, 1.80, false],
-            ['Augmentin 625mg', 'Amoxicillin + Clavulanate', 'Antibiotics', 'tablet', '625mg', 'strip', 4.50, 6.90, true],
-            ['Azithromycin 500mg', 'Azithromycin', 'Antibiotics', 'tablet', '500mg', 'strip', 3.20, 5.00, true],
-            ['Ciprofloxacin 500mg', 'Ciprofloxacin', 'Antibiotics', 'tablet', '500mg', 'strip', 2.10, 3.50, true],
-            ['Ceftriaxone 1g Inj', 'Ceftriaxone', 'Antibiotics', 'injection', '1g', 'vial', 2.80, 4.50, true],
-            ['Amlodipine 5mg', 'Amlodipine', 'Antihypertensives', 'tablet', '5mg', 'strip', 1.00, 1.70, true],
-            ['Losartan 50mg', 'Losartan Potassium', 'Antihypertensives', 'tablet', '50mg', 'strip', 1.40, 2.30, true],
-            ['Metformin 500mg', 'Metformin', 'Antidiabetics', 'tablet', '500mg', 'strip', 0.90, 1.50, true],
-            ['Glimepiride 2mg', 'Glimepiride', 'Antidiabetics', 'tablet', '2mg', 'strip', 1.30, 2.10, true],
-            ['Insulin Glargine 100IU', 'Insulin Glargine', 'Antidiabetics', 'injection', '100IU/ml', 'pen', 18.00, 26.00, true],
-            ['Omeprazole 20mg', 'Omeprazole', 'Antacids & GI', 'capsule', '20mg', 'strip', 1.20, 2.00, false],
-            ['Gaviscon Syrup', 'Sodium Alginate', 'Antacids & GI', 'syrup', '150ml', 'bottle', 3.00, 4.80, false],
-            ['ORS Sachet', 'Oral Rehydration Salts', 'Antacids & GI', 'sachet', '20.5g', 'piece', 0.20, 0.40, false],
-            ['Vitamin D3 50000IU', 'Cholecalciferol', 'Vitamins & Supplements', 'capsule', '50000IU', 'strip', 2.50, 4.00, false],
-            ['Ferrous Sulfate 200mg', 'Ferrous Sulfate', 'Vitamins & Supplements', 'tablet', '200mg', 'strip', 0.60, 1.00, false],
-            ['Salbutamol Inhaler', 'Salbutamol', 'Respiratory', 'inhaler', '100mcg', 'piece', 3.50, 5.50, true],
-            ['Montelukast 10mg', 'Montelukast', 'Respiratory', 'tablet', '10mg', 'strip', 1.80, 3.00, true],
-            ['Normal Saline 0.9% 500ml', 'Sodium Chloride', 'IV Fluids', 'infusion', '500ml', 'bottle', 0.90, 1.60, true],
-            ['Ringer Lactate 500ml', 'Compound Sodium Lactate', 'IV Fluids', 'infusion', '500ml', 'bottle', 1.00, 1.80, true],
+            ['Panadol 500mg', 'Paracetamol', 'Analgesics', 'tablet', '500mg', 'strip', 25, 35, false],
+            ['Brufen 400mg', 'Ibuprofen', 'Analgesics', 'tablet', '400mg', 'strip', 40, 60, false],
+            ['Augmentin 625mg', 'Amoxicillin + Clavulanate', 'Antibiotics', 'tablet', '625mg', 'strip', 450, 620, true],
+            ['Azithromycin 500mg', 'Azithromycin', 'Antibiotics', 'tablet', '500mg', 'strip', 300, 420, true],
+            ['Ciprofloxacin 500mg', 'Ciprofloxacin', 'Antibiotics', 'tablet', '500mg', 'strip', 180, 260, true],
+            ['Ceftriaxone 1g Inj', 'Ceftriaxone', 'Antibiotics', 'injection', '1g', 'vial', 220, 320, true],
+            ['Amlodipine 5mg', 'Amlodipine', 'Antihypertensives', 'tablet', '5mg', 'strip', 90, 140, true],
+            ['Losartan 50mg', 'Losartan Potassium', 'Antihypertensives', 'tablet', '50mg', 'strip', 150, 220, true],
+            ['Metformin 500mg', 'Metformin', 'Antidiabetics', 'tablet', '500mg', 'strip', 60, 95, true],
+            ['Glimepiride 2mg', 'Glimepiride', 'Antidiabetics', 'tablet', '2mg', 'strip', 110, 170, true],
+            ['Insulin Glargine 100IU', 'Insulin Glargine', 'Antidiabetics', 'injection', '100IU/ml', 'pen', 2800, 3600, true],
+            ['Omeprazole 20mg', 'Omeprazole', 'Antacids & GI', 'capsule', '20mg', 'strip', 100, 160, false],
+            ['Gaviscon Syrup', 'Sodium Alginate', 'Antacids & GI', 'syrup', '150ml', 'bottle', 280, 380, false],
+            ['ORS Sachet', 'Oral Rehydration Salts', 'Antacids & GI', 'sachet', '20.5g', 'piece', 20, 35, false],
+            ['Vitamin D3 50000IU', 'Cholecalciferol', 'Vitamins & Supplements', 'capsule', '50000IU', 'strip', 220, 320, false],
+            ['Ferrous Sulfate 200mg', 'Ferrous Sulfate', 'Vitamins & Supplements', 'tablet', '200mg', 'strip', 40, 70, false],
+            ['Salbutamol Inhaler', 'Salbutamol', 'Respiratory', 'inhaler', '100mcg', 'piece', 380, 520, true],
+            ['Montelukast 10mg', 'Montelukast', 'Respiratory', 'tablet', '10mg', 'strip', 180, 280, true],
+            ['Normal Saline 0.9% 500ml', 'Sodium Chloride', 'IV Fluids', 'infusion', '500ml', 'bottle', 120, 180, true],
+            ['Ringer Lactate 500ml', 'Compound Sodium Lactate', 'IV Fluids', 'infusion', '500ml', 'bottle', 130, 190, true],
         ];
         foreach ($medicines as $i => [$name, $generic, $cat, $form, $strength, $unit, $buy, $sell, $rx]) {
             $medicine = Medicine::create([
@@ -200,11 +216,11 @@ class DemoHospitalSeeder extends Seeder
 
         // ---------------------------------------------------------- radiology
         foreach ([
-            ['XR-CH', 'Chest X-Ray PA View', 'xray', 'Chest', 25], ['XR-KN', 'X-Ray Knee AP/Lateral', 'xray', 'Knee', 30],
-            ['CT-BR', 'CT Brain (Plain)', 'ct', 'Brain', 120], ['CT-AB', 'CT Abdomen & Pelvis (Contrast)', 'ct', 'Abdomen', 220],
-            ['MR-BR', 'MRI Brain', 'mri', 'Brain', 350], ['MR-LS', 'MRI Lumbar Spine', 'mri', 'Spine', 320],
-            ['US-AB', 'Ultrasound Whole Abdomen', 'ultrasound', 'Abdomen', 45], ['US-PL', 'Ultrasound Pelvis', 'ultrasound', 'Pelvis', 40],
-            ['US-OB', 'Obstetric Ultrasound', 'ultrasound', 'Pelvis', 50], ['MG-BL', 'Mammography Bilateral', 'mammography', 'Breast', 90],
+            ['XR-CH', 'Chest X-Ray PA View', 'xray', 'Chest', 1500], ['XR-KN', 'X-Ray Knee AP/Lateral', 'xray', 'Knee', 1800],
+            ['CT-BR', 'CT Brain (Plain)', 'ct', 'Brain', 8000], ['CT-AB', 'CT Abdomen & Pelvis (Contrast)', 'ct', 'Abdomen', 15000],
+            ['MR-BR', 'MRI Brain', 'mri', 'Brain', 20000], ['MR-LS', 'MRI Lumbar Spine', 'mri', 'Spine', 18000],
+            ['US-AB', 'Ultrasound Whole Abdomen', 'ultrasound', 'Abdomen', 3000], ['US-PL', 'Ultrasound Pelvis', 'ultrasound', 'Pelvis', 2500],
+            ['US-OB', 'Obstetric Ultrasound', 'ultrasound', 'Pelvis', 3000], ['MG-BL', 'Mammography Bilateral', 'mammography', 'Breast', 6000],
         ] as [$code, $name, $mod, $part, $price]) {
             RadiologyTest::create(['code' => $code, 'name' => $name, 'modality' => $mod, 'body_part' => $part, 'price' => $price,
                 'preparation' => in_array($mod, ['ultrasound']) ? 'Full bladder; fasting 6 hours for abdominal scans.' : null]);
@@ -238,8 +254,8 @@ class DemoHospitalSeeder extends Seeder
                 'uhid' => Patient::generateUhid(),
                 'first_name' => fake()->firstName($gender), 'last_name' => fake()->lastName(), 'gender' => $gender,
                 'date_of_birth' => now()->subYears(random_int(2, 80))->subDays(random_int(0, 360))->toDateString(),
-                'blood_group' => $groups[array_rand($groups)], 'phone' => '+1555'.str_pad((string) (2000000 + $i), 7, '0', STR_PAD_LEFT),
-                'email' => null, 'address' => fake()->streetAddress(), 'city' => 'Springfield', 'country' => 'United States',
+                'blood_group' => $groups[array_rand($groups)], 'phone' => '+92300'.str_pad((string) (2000000 + $i), 7, '0', STR_PAD_LEFT),
+                'email' => null, 'address' => fake()->streetAddress(), 'city' => 'Lahore', 'country' => 'Pakistan',
                 'emergency_contact_name' => fake()->name(), 'emergency_contact_phone' => fake()->numerify('+1 555 3######'), 'emergency_contact_relation' => 'Spouse',
                 'tpa_id' => $i % 4 === 0 ? $tpa->id : null, 'insurance_policy_no' => $i % 4 === 0 ? 'POL-'.random_int(100000, 999999) : null,
                 'registration_type' => $i % 3 ? 'full' : 'quick', 'registered_by' => $receptionist?->id,
@@ -299,8 +315,8 @@ class DemoHospitalSeeder extends Seeder
             'phone' => $user?->phone ?? fake()->numerify('+1 555 4######'),
             'gender' => in_array(explode(' ', $name)[0], ['Sarah', 'Emily', 'Grace', 'Olivia', 'Aisha', 'Linda']) ? 'female' : 'male',
             'joining_date' => now()->subMonths(random_int(3, 48))->toDateString(),
-            'allowances' => 300,
-            'bank_name' => 'Example Bank',
+            'allowances' => 10000,
+            'bank_name' => 'HBL',
             'bank_account' => (string) random_int(1000000000, 9999999999),
         ], $data));
     }
@@ -310,7 +326,7 @@ class DemoHospitalSeeder extends Seeder
         $cat = fn (string $n) => LabTestCategory::firstOrCreate(['name' => $n])->id;
 
         $tests = [
-            ['CBC', 'Complete Blood Count', 'Hematology', 'blood', 'EDTA (Purple)', 15, 6, [
+            ['CBC', 'Complete Blood Count', 'Hematology', 'blood', 'EDTA (Purple)', 900, 6, [
                 ['HGB', 'Hemoglobin', 'g/dL', null, null, 13.0, 17.0, 12.0, 15.5, 7, 20],
                 ['WBC', 'Total WBC Count', '10^3/µL', 4.0, 11.0, null, null, null, null, 2, 30],
                 ['RBC', 'RBC Count', '10^6/µL', null, null, 4.5, 5.9, 4.1, 5.1, null, null],
@@ -319,33 +335,33 @@ class DemoHospitalSeeder extends Seeder
                 ['NEU', 'Neutrophils', '%', 40, 75, null, null, null, null, null, null],
                 ['LYM', 'Lymphocytes', '%', 20, 45, null, null, null, null, null, null],
             ]],
-            ['LFT', 'Liver Function Test', 'Biochemistry', 'blood', 'Gel (Yellow)', 25, 12, [
+            ['LFT', 'Liver Function Test', 'Biochemistry', 'blood', 'Gel (Yellow)', 1800, 12, [
                 ['TBIL', 'Total Bilirubin', 'mg/dL', 0.2, 1.2, null, null, null, null, null, 15],
                 ['ALT', 'ALT (SGPT)', 'U/L', 7, 56, null, null, null, null, null, null],
                 ['AST', 'AST (SGOT)', 'U/L', 10, 40, null, null, null, null, null, null],
                 ['ALP', 'Alkaline Phosphatase', 'U/L', 44, 147, null, null, null, null, null, null],
                 ['ALB', 'Albumin', 'g/dL', 3.5, 5.0, null, null, null, null, null, null],
             ]],
-            ['RFT', 'Renal Function Test', 'Biochemistry', 'blood', 'Gel (Yellow)', 20, 12, [
+            ['RFT', 'Renal Function Test', 'Biochemistry', 'blood', 'Gel (Yellow)', 1600, 12, [
                 ['UREA', 'Blood Urea', 'mg/dL', 15, 45, null, null, null, null, null, null],
                 ['CREA', 'Serum Creatinine', 'mg/dL', null, null, 0.7, 1.3, 0.6, 1.1, null, 10],
                 ['UA', 'Uric Acid', 'mg/dL', null, null, 3.4, 7.0, 2.4, 6.0, null, null],
                 ['NA', 'Sodium', 'mmol/L', 135, 145, null, null, null, null, 120, 160],
                 ['K', 'Potassium', 'mmol/L', 3.5, 5.1, null, null, null, null, 2.5, 6.5],
             ]],
-            ['LIPID', 'Lipid Profile', 'Biochemistry', 'blood', 'Gel (Yellow)', 22, 12, [
+            ['LIPID', 'Lipid Profile', 'Biochemistry', 'blood', 'Gel (Yellow)', 2200, 12, [
                 ['CHOL', 'Total Cholesterol', 'mg/dL', null, 200, null, null, null, null, null, null],
                 ['TG', 'Triglycerides', 'mg/dL', null, 150, null, null, null, null, null, null],
                 ['HDL', 'HDL Cholesterol', 'mg/dL', 40, null, null, null, null, null, null, null],
                 ['LDL', 'LDL Cholesterol', 'mg/dL', null, 130, null, null, null, null, null, null],
             ]],
-            ['FBS', 'Fasting Blood Sugar', 'Biochemistry', 'blood', 'Fluoride (Grey)', 5, 2, [
+            ['FBS', 'Fasting Blood Sugar', 'Biochemistry', 'blood', 'Fluoride (Grey)', 300, 2, [
                 ['GLU', 'Glucose (Fasting)', 'mg/dL', 70, 100, null, null, null, null, 40, 400],
             ]],
-            ['HBA1C', 'HbA1c', 'Biochemistry', 'blood', 'EDTA (Purple)', 18, 24, [
+            ['HBA1C', 'HbA1c', 'Biochemistry', 'blood', 'EDTA (Purple)', 2500, 24, [
                 ['A1C', 'Glycated Hemoglobin', '%', 4.0, 5.6, null, null, null, null, null, null],
             ]],
-            ['TSH', 'Thyroid Stimulating Hormone', 'Immunology', 'blood', 'Gel (Yellow)', 20, 24, [
+            ['TSH', 'Thyroid Stimulating Hormone', 'Immunology', 'blood', 'Gel (Yellow)', 2000, 24, [
                 ['TSH', 'TSH', 'µIU/mL', 0.4, 4.0, null, null, null, null, null, null],
             ]],
         ];
@@ -361,12 +377,12 @@ class DemoHospitalSeeder extends Seeder
             }
         }
 
-        $urine = LabTest::create(['lab_test_category_id' => $cat('Clinical Pathology'), 'code' => 'URE', 'name' => 'Urine Routine Examination', 'sample_type' => 'urine', 'container' => 'Sterile cup', 'price' => 8, 'turnaround_hours' => 4]);
+        $urine = LabTest::create(['lab_test_category_id' => $cat('Clinical Pathology'), 'code' => 'URE', 'name' => 'Urine Routine Examination', 'sample_type' => 'urine', 'container' => 'Sterile cup', 'price' => 500, 'turnaround_hours' => 4]);
         foreach ([['COL', 'Colour', 'text', null, 'Pale yellow'], ['APP', 'Appearance', 'option', ['Clear', 'Slightly turbid', 'Turbid'], 'Clear'], ['PH', 'pH', 'numeric', null, null], ['PRO', 'Protein', 'option', ['Nil', 'Trace', '+', '++', '+++'], 'Nil'], ['GLUU', 'Glucose', 'option', ['Nil', 'Trace', '+', '++', '+++'], 'Nil'], ['PUS', 'Pus Cells', 'text', null, '0-5 /HPF']] as $i => [$c, $n, $type, $opts, $ref]) {
             $urine->parameters()->create(['code' => $c, 'name' => $n, 'result_type' => $type, 'options' => $opts, 'ref_text' => $ref, 'ref_min' => $c === 'PH' ? 4.5 : null, 'ref_max' => $c === 'PH' ? 8 : null, 'sort_order' => $i]);
         }
 
-        $dengue = LabTest::create(['lab_test_category_id' => $cat('Serology'), 'code' => 'NS1', 'name' => 'Dengue NS1 Antigen', 'sample_type' => 'blood', 'container' => 'Gel (Yellow)', 'price' => 18, 'turnaround_hours' => 4]);
+        $dengue = LabTest::create(['lab_test_category_id' => $cat('Serology'), 'code' => 'NS1', 'name' => 'Dengue NS1 Antigen', 'sample_type' => 'blood', 'container' => 'Gel (Yellow)', 'price' => 2500, 'turnaround_hours' => 4]);
         $dengue->parameters()->create(['code' => 'NS1', 'name' => 'Dengue NS1 Antigen', 'result_type' => 'option', 'options' => ['Negative', 'Positive'], 'ref_text' => 'Negative']);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Concerns\Toasts;
+use App\Models\BankAccount;
 use App\Models\InsuranceClaim;
 use App\Models\Invoice;
 use App\Models\ServiceCharge;
@@ -18,7 +19,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
 
     public bool $showPay = false;
 
-    public array $pay = ['amount' => '', 'method' => 'cash', 'reference' => '', 'refund' => false, 'notes' => ''];
+    public array $pay = ['amount' => '', 'account' => '', 'reference' => '', 'refund' => false, 'notes' => ''];
 
     public bool $showItem = false;
 
@@ -39,7 +40,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     public function openPay(bool $refund = false): void
     {
         $this->authorize($refund ? 'billing.cancel' : 'billing.collect');
-        $this->pay = ['amount' => (string) ($refund ? $this->invoice->paid_amount : max(0, $this->invoice->balance)), 'method' => 'cash', 'reference' => '', 'refund' => $refund, 'notes' => ''];
+        $this->pay = ['amount' => (string) ($refund ? $this->invoice->paid_amount : max(0, $this->invoice->balance)), 'account' => (string) BankAccount::cash()->id, 'reference' => '', 'refund' => $refund, 'notes' => ''];
         $this->resetValidation();
         $this->showPay = true;
     }
@@ -48,12 +49,12 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     {
         $this->authorize($this->pay['refund'] ? 'billing.cancel' : 'billing.collect');
         $this->validate([
-            'pay.amount' => 'required|numeric|min:0.01',
-            'pay.method' => 'required|in:cash,card,bank_transfer,online,cheque,insurance',
+            'pay.amount' => 'required|integer|min:1',
+            'pay.account' => ['required', bank_account_exists()],
             'pay.reference' => 'nullable|string|max:100',
             'pay.notes' => 'nullable|string|max:200',
-        ]);
-        $payment = $billing->addPayment($this->invoice, (float) $this->pay['amount'], $this->pay['method'], $this->pay['reference'] ?: null, (bool) $this->pay['refund'], $this->pay['notes'] ?: null);
+        ], [], ['pay.amount' => 'amount', 'pay.account' => 'account']);
+        $payment = $billing->addPayment($this->invoice, (int) $this->pay['amount'], $this->pay['account'], $this->pay['reference'] ?: null, (bool) $this->pay['refund'], $this->pay['notes'] ?: null);
         $this->invoice->refresh();
         $this->showPay = false;
         $this->toast(($this->pay['refund'] ? 'Refund ' : 'Payment ').$payment->payment_no.' recorded.');
@@ -81,8 +82,8 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
             'item.service_type' => 'required|string',
             'item.description' => 'required|string|max:255',
             'item.quantity' => 'required|numeric|min:0.01',
-            'item.unit_price' => 'required|numeric|min:0',
-            'item.discount' => 'nullable|numeric|min:0',
+            'item.unit_price' => 'required|integer|min:0',
+            'item.discount' => 'nullable|integer|min:0',
             'item.tax_percent' => 'nullable|numeric|min:0|max:100',
         ]);
         $billing->addItem($this->invoice, $this->item);
@@ -101,7 +102,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     public function saveInsurance(): void
     {
         $this->authorize('insurance.manage');
-        $this->validate(['insurance_amount' => 'required|numeric|min:0|max:'.$this->invoice->total]);
+        $this->validate(['insurance_amount' => 'required|integer|min:0|max:'.$this->invoice->total]);
         $this->invoice->update(['insurance_amount' => $this->insurance_amount]);
         $this->invoice->recalculate();
         $this->toast('Insurance coverage updated.');
@@ -138,7 +139,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     public function with(): array
     {
         return [
-            'inv' => $this->invoice->load(['patient', 'items.doctor', 'payments.receiver', 'tpa', 'admission', 'opdVisit', 'claims', 'creator']),
+            'inv' => $this->invoice->load(['patient', 'items.doctor', 'payments.receiver', 'payments.account', 'tpa', 'admission', 'opdVisit', 'claims', 'creator']),
             'services' => ServiceCharge::where('is_active', true)->orderBy('name')->get()->mapWithKeys(fn ($s) => [$s->id => $s->name.' · '.money($s->price)])->all(),
         ];
     }
@@ -149,7 +150,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
         <x-status :value="$inv->status" />
         <a href="{{ route('tenant.billing.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line me-1"></i>Print</a>
         @if (! in_array($inv->status, ['paid', 'cancelled']))
-            @can('billing.collect')<button class="btn btn-sm btn-success" wire:click="openPay(false)"><i class="ri-money-dollar-circle-line me-1"></i>Collect payment</button>@endcan
+            @can('billing.collect')<button class="btn btn-sm btn-success" wire:click="openPay(false)"><i class="ri-money-rupee-circle-line me-1"></i>Collect payment</button>@endcan
         @endif
         @if ($inv->paid_amount > 0 && $inv->status !== 'cancelled')
             @can('billing.cancel')<button class="btn btn-sm btn-light-warning" wire:click="openPay(true)">Refund</button>@endcan
@@ -199,10 +200,10 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
                 <div class="card-header"><h6 class="card-title mb-0">Payments</h6></div>
                 <div class="table-responsive">
                     <table class="table table-hms mb-0">
-                        <thead class="table-light"><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th>By</th><th class="text-end">Amount</th></tr></thead>
+                        <thead class="table-light"><tr><th>Receipt</th><th>Date</th><th>Account</th><th>Reference</th><th>By</th><th class="text-end">Amount</th></tr></thead>
                         <tbody>
                             @forelse ($inv->payments as $p)
-                                <tr class="{{ $p->is_refund ? 'table-warning' : '' }}"><td>{{ $p->payment_no }} @if ($p->is_refund)<span class="badge bg-warning">Refund</span>@endif</td><td>{{ fmt_datetime($p->paid_at) }}</td><td>{{ label($p->method) }}</td><td class="fs-12">{{ $p->reference }} {{ $p->notes }}</td><td class="fs-12">{{ $p->receiver?->name }}</td><td class="text-end">{{ $p->is_refund ? '-' : '' }}{{ money($p->amount) }}</td></tr>
+                                <tr class="{{ $p->is_refund ? 'table-warning' : '' }}"><td>{{ $p->payment_no }} @if ($p->is_refund)<span class="badge bg-warning">Refund</span>@endif</td><td>{{ fmt_datetime($p->paid_at) }}</td><td>{{ $p->accountLabel() }}</td><td class="fs-12">{{ $p->reference }} {{ $p->notes }}</td><td class="fs-12">{{ $p->receiver?->name }}</td><td class="text-end">{{ $p->is_refund ? '-' : '' }}{{ money($p->amount) }}</td></tr>
                             @empty
                                 <x-empty-row :colspan="6" message="No payments yet." />
                             @endforelse
@@ -235,7 +236,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
                         <div class="card-body">
                             <div class="input-group mb-2">
                                 <span class="input-group-text">{{ currency_symbol() }}</span>
-                                <input type="number" step="0.01" class="form-control" wire:model="insurance_amount" @disabled($inv->status === 'cancelled')>
+                                <input type="number" step="1" min="0" inputmode="numeric" class="form-control" wire:model="insurance_amount" @disabled($inv->status === 'cancelled')>
                                 <button class="btn btn-light-primary" wire:click="saveInsurance">Set cover</button>
                             </div>
                             <p class="fs-12 text-muted">Amount expected from the insurer; the patient pays the rest.</p>
@@ -253,9 +254,9 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
 
     <x-modal wire:model="showPay" :title="($pay['refund'] ?? false) ? 'Refund' : 'Collect payment'">
         <div class="row">
-            <x-form.input class="col-md-6" label="Amount" model="pay.amount" type="number" step="0.01" required />
-            <x-form.select class="col-md-6" label="Method" model="pay.method" :options="['cash' => 'Cash', 'card' => 'Card', 'bank_transfer' => 'Bank transfer', 'online' => 'Online', 'cheque' => 'Cheque', 'insurance' => 'Insurance settlement']" :placeholder="false" />
-            <x-form.input class="col-12" label="Reference" model="pay.reference" />
+            <x-form.money class="col-md-6" label="Amount" model="pay.amount" required />
+            <x-form.account class="col-md-6" :label="($pay['refund'] ?? false) ? 'Paid from' : 'Received in'" model="pay.account" />
+            <x-form.input class="col-12" label="Reference" model="pay.reference" placeholder="Transaction ID, cheque no. or card slip (optional)" />
             <x-form.input class="col-12" label="Notes" model="pay.notes" />
         </div>
         <x-slot:footer><button class="btn btn-light" x-on:click="show = false">Cancel</button><button class="btn {{ ($pay['refund'] ?? false) ? 'btn-warning' : 'btn-success' }}" wire:click="savePayment">{{ ($pay['refund'] ?? false) ? 'Refund' : 'Record payment' }}</button></x-slot:footer>
@@ -267,8 +268,8 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
             <x-form.select class="col-md-5" label="Type" model="item.service_type" :options="['service' => 'Service', 'opd' => 'OPD', 'ipd' => 'IPD', 'pharmacy' => 'Pharmacy', 'lab' => 'Lab', 'radiology' => 'Radiology', 'ot' => 'OT', 'bloodbank' => 'Blood bank', 'other' => 'Other']" :placeholder="false" />
             <x-form.input class="col-md-7" label="Description" model="item.description" required />
             <x-form.input class="col-md-3" label="Qty" model="item.quantity" type="number" step="0.5" />
-            <x-form.input class="col-md-3" label="Price" model="item.unit_price" type="number" step="0.01" />
-            <x-form.input class="col-md-3" label="Discount" model="item.discount" type="number" step="0.01" />
+            <x-form.money class="col-md-3" label="Price" model="item.unit_price" />
+            <x-form.money class="col-md-3" label="Discount" model="item.discount" />
             <x-form.input class="col-md-3" label="Tax %" model="item.tax_percent" type="number" step="0.01" />
         </div>
         <x-slot:footer><button class="btn btn-light" x-on:click="show = false">Cancel</button><button class="btn btn-primary" wire:click="saveItem">Add</button></x-slot:footer>

@@ -117,7 +117,7 @@ new #[Layout('layouts.app')] #[Title('Subscription')] class extends Component
                     @foreach ($plans as $p)
                         <label class="d-flex align-items-start gap-2 border rounded p-2 mb-2 {{ $planId == $p->id ? 'border-primary' : '' }}" role="button">
                             <input type="radio" class="form-check-input mt-1" value="{{ $p->id }}" wire:model.live="planId">
-                            <span class="flex-grow-1"><strong>{{ $p->name }}</strong> <span class="float-end">{{ money($cycle === 'yearly' ? $p->price_yearly : $p->price_monthly, $p->currency) }}</span><small class="d-block text-muted">{{ $p->description }}</small></span>
+                            <span class="flex-grow-1"><strong>{{ $p->name }}</strong> <span class="float-end">{{ money($cycle === 'yearly' ? $p->price_yearly : $p->price_monthly) }}</span><small class="d-block text-muted">{{ $p->description }}</small></span>
                         </label>
                     @endforeach
                     <select class="form-select mb-2" wire:model.live="cycle"><option value="monthly">Monthly</option><option value="yearly">Yearly (save ~2 months)</option></select>
@@ -135,7 +135,7 @@ new #[Layout('layouts.app')] #[Title('Subscription')] class extends Component
                             @forelse ($invoices as $inv)
                                 <tr>
                                     <td class="fw-semibold">{{ $inv->number }}</td><td>{{ $inv->plan?->name }} ({{ $inv->billing_cycle }})</td><td class="fs-12">{{ fmt_date($inv->period_start) }} – {{ fmt_date($inv->period_end) }}</td>
-                                    <td>{{ fmt_date($inv->due_date) }}</td><td class="text-end">{{ money($inv->total, $inv->currency) }}</td><td><x-status :value="$inv->status" /></td>
+                                    <td>{{ fmt_date($inv->due_date) }}</td><td class="text-end">{{ money($inv->total) }}</td><td><x-status :value="$inv->status" /></td>
                                     <td class="text-end">@if (in_array($inv->status, ['unpaid', 'pending_verification']))<button class="btn btn-sm btn-success" wire:click="$set('payingId', {{ $inv->id }})">{{ $inv->status === 'unpaid' ? 'Pay' : 'Update proof' }}</button>@endif</td>
                                 </tr>
                             @empty

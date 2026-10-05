@@ -66,7 +66,7 @@ new #[Layout('layouts.app')] #[Title('Invoices')] class extends Component
 
     <div class="row g-4 mb-4">
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Billed" :value="money($totals->total)" icon="ri-file-list-3-line" color="primary" :hint="$totals->c.' invoices'" /></div>
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="Collected" :value="money($totals->paid)" icon="ri-money-dollar-circle-line" color="success" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="Collected" :value="money($totals->paid)" icon="ri-money-rupee-circle-line" color="success" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Insurance / TPA" :value="money($totals->ins)" icon="ri-shield-cross-line" color="info" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Outstanding" :value="money($totals->total - $totals->paid - $totals->ins)" icon="ri-time-line" color="warning" /></div>
     </div>

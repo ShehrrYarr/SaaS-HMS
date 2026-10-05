@@ -14,8 +14,8 @@ class Plan extends Model
         return [
             'modules' => 'array',
             'is_active' => 'boolean',
-            'price_monthly' => 'decimal:2',
-            'price_yearly' => 'decimal:2',
+            'price_monthly' => 'integer',
+            'price_yearly' => 'integer',
         ];
     }
 

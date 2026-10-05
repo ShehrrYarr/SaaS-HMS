@@ -82,7 +82,7 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
             'lines' => 'required|array|min:1',
             'lines.*.medicine_id' => ['required', tenant_exists('medicines')],
             'lines.*.quantity' => 'required|integer|min:1',
-            'lines.*.unit_price' => 'required|numeric|min:0',
+            'lines.*.unit_price' => 'required|integer|min:0',
             'lines.*.tax_percent' => 'nullable|numeric|min:0|max:100',
         ], [], ['lines.*.medicine_id' => 'medicine']);
 
@@ -91,8 +91,8 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
             $subtotal = 0;
             $tax = 0;
             foreach ($this->lines as $l) {
-                $line = $l['quantity'] * $l['unit_price'];
-                $lineTax = round($line * (float) $l['tax_percent'] / 100, 2);
+                $line = $l['quantity'] * rupees($l['unit_price']);
+                $lineTax = rupees($line * (float) $l['tax_percent'] / 100);
                 $po->items()->create(['medicine_id' => $l['medicine_id'], 'quantity' => $l['quantity'], 'unit_price' => $l['unit_price'], 'tax_percent' => $l['tax_percent'] ?: 0, 'total' => $line + $lineTax]);
                 $subtotal += $line;
                 $tax += $lineTax;
@@ -161,7 +161,7 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
                     <tr wire:key="pol-{{ $i }}">
                         <td><x-form.search-select class="mb-0" model="lines.{{ $i }}.medicine_id" :options="$medicines" live /></td>
                         <td><input type="number" min="1" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.quantity"></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.unit_price"></td>
+                        <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.unit_price"></td>
                         <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live.debounce.400ms="lines.{{ $i }}.tax_percent"></td>
                         <td class="text-end">{{ money((float) ($l['quantity'] ?: 0) * (float) ($l['unit_price'] ?: 0) * (1 + (float) ($l['tax_percent'] ?: 0) / 100)) }}</td>
                         <td><button class="btn btn-sm btn-link text-danger" wire:click="removeLine({{ $i }})"><i class="ri-close-line"></i></button></td>

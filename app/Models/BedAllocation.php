@@ -17,7 +17,7 @@ class BedAllocation extends Model
         return [
             'from_at' => 'datetime',
             'to_at' => 'datetime',
-            'charge_per_day' => 'decimal:2',
+            'charge_per_day' => 'integer',
         ];
     }
 

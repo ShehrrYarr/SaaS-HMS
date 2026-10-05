@@ -18,8 +18,8 @@ class Medicine extends Model
     protected function casts(): array
     {
         return [
-            'purchase_price' => 'decimal:2',
-            'sale_price' => 'decimal:2',
+            'purchase_price' => 'integer',
+            'sale_price' => 'integer',
             'tax_percent' => 'decimal:2',
             'requires_prescription' => 'boolean',
             'is_active' => 'boolean',

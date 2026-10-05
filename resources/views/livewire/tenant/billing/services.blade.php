@@ -44,7 +44,7 @@ new #[Layout('layouts.app')] #[Title('Service Charges')] class extends Component
             'form.code' => 'nullable|string|max:20',
             'form.name' => 'required|string|max:150',
             'form.category' => 'required|string|max:30',
-            'form.price' => 'required|numeric|min:0',
+            'form.price' => 'required|integer|min:0',
             'form.tax_percent' => 'required|numeric|min:0|max:100',
             'form.is_active' => 'boolean',
         ])['form'];
@@ -88,7 +88,7 @@ new #[Layout('layouts.app')] #[Title('Service Charges')] class extends Component
             <x-form.input class="col-md-4" label="Code" model="form.code" />
             <x-form.input class="col-md-8" label="Name" model="form.name" required />
             <x-form.select class="col-md-6" label="Category" model="form.category" :options="$categories" :placeholder="false" />
-            <x-form.input class="col-md-3" label="Price" model="form.price" type="number" step="0.01" required />
+            <x-form.money class="col-md-3" label="Price" model="form.price" required />
             <x-form.input class="col-md-3" label="Tax %" model="form.tax_percent" type="number" step="0.01" />
             <x-form.switch class="col-12" label="Active" model="form.is_active" />
         </div>

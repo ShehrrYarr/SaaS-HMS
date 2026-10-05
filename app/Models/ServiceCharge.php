@@ -15,7 +15,7 @@ class ServiceCharge extends Model
     {
         return [
             'is_active' => 'boolean',
-            'price' => 'decimal:2',
+            'price' => 'integer',
             'tax_percent' => 'decimal:2',
         ];
     }

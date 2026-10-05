@@ -25,7 +25,7 @@ class Surgery extends Model
             'actual_end' => 'datetime',
             'pre_op_checklist' => 'array',
             'post_op_checklist' => 'array',
-            'charges' => 'decimal:2',
+            'charges' => 'integer',
         ];
     }
 

@@ -55,11 +55,11 @@ new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component
         }
         if ($h->hasModule('billing') && $user->can('billing.reports')) {
             $collected = Payment::whereDate('paid_at', $today)->where('is_refund', false)->sum('amount') - Payment::whereDate('paid_at', $today)->where('is_refund', true)->sum('amount');
-            $cards[] = ['title' => 'Collections Today', 'value' => money($collected), 'icon' => 'ri-money-dollar-circle-line', 'color' => 'success',
+            $cards[] = ['title' => 'Collections Today', 'value' => money($collected), 'icon' => 'ri-money-rupee-circle-line', 'color' => 'success',
                 'hint' => 'Outstanding: '.money(Invoice::whereIn('status', ['unpaid', 'partial'])->get()->sum('balance')), 'href' => route('tenant.billing.reports')];
             $charts['revenue'] = [
                 'chart' => ['type' => 'bar', 'height' => 280],
-                'series' => [['name' => 'Collections', 'data' => $days->map(fn ($d) => round((float) Payment::whereDate('paid_at', $d)->where('is_refund', false)->sum('amount'), 2))->values()]],
+                'series' => [['name' => 'Collections', 'data' => $days->map(fn ($d) => rupees(Payment::whereDate('paid_at', $d)->where('is_refund', false)->sum('amount')))->values()]],
                 'xaxis' => ['categories' => $days->map->format('d M')->values()],
                 'plotOptions' => ['bar' => ['borderRadius' => 4, 'columnWidth' => '50%']], 'dataLabels' => ['enabled' => false],
             ];

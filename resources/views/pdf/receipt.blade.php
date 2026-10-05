@@ -17,16 +17,16 @@
     <table>
         @foreach ($sale->items as $i)
             <tr><td colspan="3"><b>{{ $i->medicine->label }}</b> <span class="small">B:{{ $i->batch->batch_no }} E:{{ $i->batch->expiry_date->format('m/y') }}</span></td></tr>
-            <tr><td class="small">{{ $i->quantity }} × {{ number_format($i->unit_price, 2) }}</td><td></td><td class="right">{{ number_format($i->total, 2) }}</td></tr>
+            <tr><td class="small">{{ $i->quantity }} × {{ number_format($i->unit_price) }}</td><td></td><td class="right">{{ number_format($i->total) }}</td></tr>
         @endforeach
     </table>
     <hr>
     <table>
-        <tr><td>Subtotal</td><td class="right">{{ number_format($sale->subtotal, 2) }}</td></tr>
-        @if ($sale->discount > 0)<tr><td>Discount</td><td class="right">-{{ number_format($sale->discount, 2) }}</td></tr>@endif
-        @if ($sale->tax > 0)<tr><td>{{ $hospital->tax_label }}</td><td class="right">{{ number_format($sale->tax, 2) }}</td></tr>@endif
-        <tr><td class="bold">TOTAL ({{ $hospital->currency }})</td><td class="right bold">{{ number_format($sale->total, 2) }}</td></tr>
-        <tr><td>Paid ({{ ucwords(str_replace('_', ' ', $sale->payment_method)) }})</td><td class="right">{{ number_format($sale->payment_method === 'ipd_credit' ? 0 : $sale->paid_amount, 2) }}</td></tr>
+        <tr><td>Subtotal</td><td class="right">{{ number_format($sale->subtotal) }}</td></tr>
+        @if ($sale->discount > 0)<tr><td>Discount</td><td class="right">-{{ number_format($sale->discount) }}</td></tr>@endif
+        @if ($sale->tax > 0)<tr><td>{{ $hospital->tax_label }}</td><td class="right">{{ number_format($sale->tax) }}</td></tr>@endif
+        <tr><td class="bold">TOTAL ({{ currency_symbol() }})</td><td class="right bold">{{ number_format($sale->total) }}</td></tr>
+        <tr><td>Paid ({{ $sale->paymentLabel() }})</td><td class="right">{{ number_format($sale->payment_method === 'ipd_credit' ? 0 : $sale->paid_amount) }}</td></tr>
     </table>
     @if ($sale->status !== 'completed')<p class="center text-danger">{{ strtoupper($sale->status) }}</p>@endif
     <hr>

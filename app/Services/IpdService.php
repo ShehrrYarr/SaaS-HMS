@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class IpdService
 {
-    public function __construct(protected BillingService $billing) {}
+    public function __construct(protected BillingService $billing, protected LedgerService $ledger) {}
 
     public function admit(Patient $patient, array $data): IpdAdmission
     {
@@ -22,7 +22,10 @@ class IpdService
             throw ValidationException::withMessages(['patient_id' => 'This patient is already admitted.']);
         }
 
-        return DB::transaction(function () use ($patient, $data) {
+        $deposit = rupees($data['deposit_amount'] ?? 0);
+        $depositAccount = $deposit > 0 ? $this->ledger->account($data['deposit_account_id'] ?? 'cash') : null;
+
+        return DB::transaction(function () use ($patient, $data, $deposit, $depositAccount) {
             $bed = Bed::lockForUpdate()->findOrFail($data['bed_id']);
             if ($bed->status !== 'available' && $bed->status !== 'reserved') {
                 throw ValidationException::withMessages(['bed_id' => 'Bed '.$bed->bed_no.' is not available.']);
@@ -42,7 +45,8 @@ class IpdService
                 'insurance_policy_no' => $data['insurance_policy_no'] ?? $patient->insurance_policy_no,
                 'guardian_name' => $data['guardian_name'] ?? null,
                 'guardian_phone' => $data['guardian_phone'] ?? null,
-                'deposit_amount' => $data['deposit_amount'] ?? 0,
+                'deposit_amount' => $deposit,
+                'deposit_account_id' => $depositAccount?->id,
                 'expected_discharge_date' => $data['expected_discharge_date'] ?? null,
                 'status' => 'admitted',
                 'created_by' => auth()->id(),
@@ -57,6 +61,10 @@ class IpdService
                 'created_by' => auth()->id(),
             ]);
             $bed->update(['status' => 'occupied']);
+
+            if ($depositAccount) {
+                $this->ledger->moneyIn($depositAccount, $deposit, 'deposit', $admission, "Advance deposit · {$admission->admission_no} · {$patient->full_name}");
+            }
 
             return $admission;
         });
@@ -92,7 +100,7 @@ class IpdService
     {
         $this->ensureAdmitted($admission);
         $quantity = (float) ($data['quantity'] ?? 1);
-        $unit = (float) $data['unit_price'];
+        $unit = rupees($data['unit_price']);
 
         return IpdCharge::create([
             'ipd_admission_id' => $admission->id,
@@ -100,7 +108,7 @@ class IpdService
             'description' => $data['description'],
             'quantity' => $quantity,
             'unit_price' => $unit,
-            'amount' => round($quantity * $unit, 2),
+            'amount' => rupees($quantity * $unit),
             'charged_at' => $data['charged_at'] ?? now(),
             'source_type' => isset($data['source']) ? $data['source']->getMorphClass() : null,
             'source_id' => isset($data['source']) ? $data['source']->getKey() : null,
@@ -126,7 +134,7 @@ class IpdService
                     'service_type' => 'ipd',
                     'description' => 'Bed charges – '.$allocation->bed->label.' ('.$days.' day'.($days > 1 ? 's' : '').')',
                     'quantity' => $days,
-                    'unit_price' => (float) $allocation->charge_per_day,
+                    'unit_price' => $allocation->charge_per_day,
                     'tax_percent' => $tax,
                     'source' => $allocation,
                 ];
@@ -136,7 +144,7 @@ class IpdService
                     'service_type' => in_array($charge->category, ['medicine', 'lab', 'radiology', 'ot', 'bloodbank']) ? ($charge->category === 'medicine' ? 'pharmacy' : $charge->category) : 'ipd',
                     'description' => $charge->description,
                     'quantity' => (float) $charge->quantity,
-                    'unit_price' => (float) $charge->unit_price,
+                    'unit_price' => $charge->unit_price,
                     'tax_percent' => $charge->category === 'medicine' ? 0 : $tax,
                     'source' => $charge,
                     'doctor_id' => $charge->doctor_id,
@@ -150,8 +158,9 @@ class IpdService
             ]);
             $admission->charges()->where('billed', false)->update(['billed' => true]);
 
-            if ((float) $admission->deposit_amount > 0) {
-                $this->billing->addPayment($invoice, min((float) $admission->deposit_amount, $invoice->balance), 'cash', 'Advance deposit', false, 'Adjusted from admission deposit');
+            // The deposit was posted to Banks & Cash at admission, so settling with it moves no money.
+            if ($admission->deposit_amount > 0 && $invoice->balance > 0) {
+                $this->billing->addPayment($invoice, min($admission->deposit_amount, $invoice->balance), null, 'Advance deposit', false, 'Adjusted from admission deposit', 'deposit');
             }
 
             $admission->update([

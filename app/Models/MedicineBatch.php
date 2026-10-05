@@ -18,8 +18,8 @@ class MedicineBatch extends Model
         return [
             'mfg_date' => 'date',
             'expiry_date' => 'date',
-            'purchase_price' => 'decimal:2',
-            'sale_price' => 'decimal:2',
+            'purchase_price' => 'integer',
+            'sale_price' => 'integer',
         ];
     }
 

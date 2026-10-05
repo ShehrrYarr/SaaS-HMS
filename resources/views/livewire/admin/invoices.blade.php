@@ -98,8 +98,8 @@ new #[Layout('layouts.admin')] #[Title('Subscription Invoices')] class extends C
     </x-page-header>
 
     <div class="row g-4 mb-4">
-        <div class="col-md-4"><x-stat-card title="Collected" :value="money($totals['paid'], 'USD')" icon="ri-money-dollar-circle-line" color="success" /></div>
-        <div class="col-md-4"><x-stat-card title="Outstanding" :value="money($totals['unpaid'], 'USD')" icon="ri-time-line" color="warning" /></div>
+        <div class="col-md-4"><x-stat-card title="Collected" :value="money($totals['paid'])" icon="ri-money-rupee-circle-line" color="success" /></div>
+        <div class="col-md-4"><x-stat-card title="Outstanding" :value="money($totals['unpaid'])" icon="ri-time-line" color="warning" /></div>
         <div class="col-md-4"><x-stat-card title="Awaiting verification" :value="$totals['verify']" icon="ri-shield-check-line" color="info" /></div>
     </div>
 
@@ -136,7 +136,7 @@ new #[Layout('layouts.admin')] #[Title('Subscription Invoices')] class extends C
                             <td class="fw-semibold">{{ $inv->number }}</td>
                             <td><a href="{{ route('admin.hospitals.show', $inv->hospital) }}" wire:navigate>{{ $inv->hospital?->name }}</a></td>
                             <td>{{ $inv->plan?->name }} <div class="fs-12 text-muted">{{ fmt_date($inv->period_start) }} – {{ fmt_date($inv->period_end) }}</div></td>
-                            <td>{{ money($inv->total, $inv->currency) }}</td>
+                            <td>{{ money($inv->total) }}</td>
                             <td class="{{ $inv->status === 'unpaid' && $inv->due_date->isPast() ? 'text-danger' : '' }}">{{ fmt_date($inv->due_date) }}</td>
                             <td><x-status :value="$inv->status" /></td>
                             <td class="fs-12">

@@ -22,7 +22,7 @@ class IpdAdmission extends Model
             'discharged_at' => 'datetime',
             'expected_discharge_date' => 'date',
             'follow_up_date' => 'date',
-            'deposit_amount' => 'decimal:2',
+            'deposit_amount' => 'integer',
         ];
     }
 
@@ -124,5 +124,10 @@ class IpdAdmission extends Model
     public function totalCharges(): float
     {
         return $this->accruedBedCharges() + (float) $this->charges->sum('amount');
+    }
+
+    public function depositAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'deposit_account_id');
     }
 }

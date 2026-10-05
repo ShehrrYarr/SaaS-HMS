@@ -97,11 +97,11 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
             'form.license_no' => 'nullable|string|max:60',
             'form.joining_date' => 'nullable|date',
             'form.employment_type' => 'required|in:full_time,part_time,visiting,contract',
-            'form.basic_salary' => 'required|numeric|min:0',
-            'form.allowances' => 'required|numeric|min:0',
-            'form.deductions' => 'required|numeric|min:0',
-            'form.consultation_fee' => 'required|numeric|min:0',
-            'form.follow_up_fee' => 'required|numeric|min:0',
+            'form.basic_salary' => 'required|integer|min:0',
+            'form.allowances' => 'required|integer|min:0',
+            'form.deductions' => 'required|integer|min:0',
+            'form.consultation_fee' => 'required|integer|min:0',
+            'form.follow_up_fee' => 'required|integer|min:0',
             'form.commission_percent' => 'required|numeric|min:0|max:100',
             'form.bank_name' => 'nullable|string|max:100',
             'form.bank_account' => 'nullable|string|max:60',
@@ -223,13 +223,13 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
             <x-form.input class="col-md-4" label="Specialization" model="form.specialization" />
             <x-form.input class="col-md-4" label="License / registration no." model="form.license_no" />
             <div class="col-12"><h6 class="mt-2">Payroll</h6></div>
-            <x-form.input class="col-md-3" label="Basic salary" model="form.basic_salary" type="number" step="0.01" />
-            <x-form.input class="col-md-3" label="Allowances" model="form.allowances" type="number" step="0.01" />
-            <x-form.input class="col-md-3" label="Fixed deductions" model="form.deductions" type="number" step="0.01" />
+            <x-form.money class="col-md-3" label="Basic salary" model="form.basic_salary" />
+            <x-form.money class="col-md-3" label="Allowances" model="form.allowances" />
+            <x-form.money class="col-md-3" label="Fixed deductions" model="form.deductions" />
             <x-form.select class="col-md-3" label="Status" model="form.status" :options="['active' => 'Active', 'inactive' => 'Inactive']" :placeholder="false" />
             @if (($form['staff_type'] ?? '') === 'doctor')
-                <x-form.input class="col-md-4" label="Consultation fee" model="form.consultation_fee" type="number" step="0.01" />
-                <x-form.input class="col-md-4" label="Follow-up fee" model="form.follow_up_fee" type="number" step="0.01" />
+                <x-form.money class="col-md-4" label="Consultation fee" model="form.consultation_fee" />
+                <x-form.money class="col-md-4" label="Follow-up fee" model="form.follow_up_fee" />
                 <x-form.input class="col-md-4" label="Commission % (fee split)" model="form.commission_percent" type="number" step="0.01" />
             @endif
             <x-form.input class="col-md-4" label="Bank" model="form.bank_name" />

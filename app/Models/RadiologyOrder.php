@@ -22,7 +22,7 @@ class RadiologyOrder extends Model
             'performed_at' => 'datetime',
             'reported_at' => 'datetime',
             'approved_at' => 'datetime',
-            'price' => 'decimal:2',
+            'price' => 'integer',
         ];
     }
 

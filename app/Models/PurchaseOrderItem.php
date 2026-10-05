@@ -12,6 +12,14 @@ class PurchaseOrderItem extends Model
 
     protected $guarded = ['id', 'hospital_id'];
 
+    protected function casts(): array
+    {
+        return [
+            'unit_price' => 'integer',
+            'total' => 'integer',
+        ];
+    }
+
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);

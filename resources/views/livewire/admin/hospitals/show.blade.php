@@ -40,7 +40,7 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
 
     public function edit(): void
     {
-        $this->form = $this->hospital->only(['name', 'slug', 'email', 'phone', 'address', 'city', 'state', 'country', 'currency', 'timezone', 'tax_label', 'tax_rate']);
+        $this->form = $this->hospital->only(['name', 'slug', 'email', 'phone', 'address', 'city', 'state', 'country', 'timezone', 'tax_label', 'tax_rate']);
         $this->resetValidation();
         $this->showEdit = true;
     }
@@ -56,7 +56,6 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
             'form.city' => 'nullable|string|max:100',
             'form.state' => 'nullable|string|max:100',
             'form.country' => 'nullable|string|max:100',
-            'form.currency' => ['required', Rule::in(array_keys(config('hms.currencies')))],
             'form.timezone' => 'required|timezone',
             'form.tax_label' => 'required|string|max:30',
             'form.tax_rate' => 'required|numeric|min:0|max:100',
@@ -124,7 +123,6 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
             ],
             'invoices' => SubscriptionInvoice::with('plan')->where('hospital_id', $id)->latest()->limit(10)->get(),
             'admins' => tenancy()->run($this->hospital, fn () => User::where('hospital_id', $id)->role('Hospital Admin')->get()),
-            'currencies' => collect(config('hms.currencies'))->mapWithKeys(fn ($s, $c) => [$c => "$c ($s)"])->all(),
             'timezones' => collect(timezone_identifiers_list())->mapWithKeys(fn ($t) => [$t => $t])->all(),
         ];
     }
@@ -160,7 +158,7 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
                         <dt class="col-5">Code</dt><dd class="col-7">{{ $hospital->code }}</dd>
                         <dt class="col-5">Email</dt><dd class="col-7">{{ $hospital->email ?: '—' }}</dd>
                         <dt class="col-5">Phone</dt><dd class="col-7">{{ $hospital->phone ?: '—' }}</dd>
-                        <dt class="col-5">Currency</dt><dd class="col-7">{{ $hospital->currency }} &middot; {{ $hospital->timezone }}</dd>
+                        <dt class="col-5">Timezone</dt><dd class="col-7">{{ $hospital->timezone }}</dd>
                         <dt class="col-5">Users</dt><dd class="col-7">{{ $counts['users'] }}</dd>
                         <dt class="col-5">Patients</dt><dd class="col-7">{{ number_format($counts['patients']) }}</dd>
                         <dt class="col-5">Storage</dt><dd class="col-7">{{ human_bytes($hospital->storage_used_bytes) }}</dd>
@@ -219,7 +217,7 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
                                     <td>{{ $inv->number }}</td>
                                     <td>{{ $inv->plan?->name }} ({{ $inv->billing_cycle }})</td>
                                     <td>{{ fmt_date($inv->period_start) }} – {{ fmt_date($inv->period_end) }}</td>
-                                    <td>{{ money($inv->total, $inv->currency) }}</td>
+                                    <td>{{ money($inv->total) }}</td>
                                     <td><x-status :value="$inv->status" /></td>
                                     <td class="text-end"><a href="{{ route('admin.invoices.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-file-pdf-2-line"></i></a></td>
                                 </tr>
@@ -243,8 +241,7 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
             <x-form.input class="col-md-4" label="City" model="form.city" />
             <x-form.input class="col-md-4" label="State" model="form.state" />
             <x-form.input class="col-md-4" label="Country" model="form.country" />
-            <x-form.select class="col-md-3" label="Currency" model="form.currency" :options="$currencies" :placeholder="false" />
-            <x-form.search-select class="col-md-5" label="Timezone" model="form.timezone" :options="$timezones" />
+            <x-form.search-select class="col-md-8" label="Timezone" model="form.timezone" :options="$timezones" />
             <x-form.input class="col-md-2" label="Tax label" model="form.tax_label" />
             <x-form.input class="col-md-2" label="Tax %" model="form.tax_rate" type="number" step="0.01" />
         </div>

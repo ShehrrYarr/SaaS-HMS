@@ -71,3 +71,16 @@ body.lp{background:#fff;color:#1f2937}
 .lp-cta{background:linear-gradient(135deg,#0d6efd,#0a58ca);color:#fff;border-radius:20px}
 .lp-footer{background:#0f172a;color:#94a3b8}
 .lp-footer a{color:#cbd5e1}
+
+/* ---------------------------------------------------------------- Sidebar scrolling
+   The template scrolls the menu with SimpleBar, but layout.js starts it 100ms after <head>,
+   often before simplebar.min.js has loaded, so long menus were cut off. Scroll natively
+   as well; when SimpleBar does start it takes over. */
+html:not([data-main-layout]) .app-sidebar .app-sidebar-menu,
+[data-main-layout="vertical"] .app-sidebar .app-sidebar-menu,
+[data-main-layout="two-column"] .app-sidebar .app-sidebar-menu,
+.small-screen-sidebar .offcanvas-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.35) transparent}
+[data-main-layout="vertical"] .app-sidebar .app-sidebar-menu::-webkit-scrollbar{width:6px}
+[data-main-layout="vertical"] .app-sidebar .app-sidebar-menu::-webkit-scrollbar-thumb{background:rgba(100,116,139,.35);border-radius:6px}
+.small-screen-sidebar .app-sidebar{position:static;height:auto}
+.small-screen-sidebar .app-sidebar .app-sidebar-menu{height:auto}

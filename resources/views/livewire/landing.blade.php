@@ -250,7 +250,7 @@ new #[Layout('layouts.landing')] class extends Component
                         <div class="lp-kicker mb-2">For hospital groups &amp; providers</div>
                         <h3 class="fw-bold mb-3">One platform, many hospitals</h3>
                         <ul class="list-unstyled fs-14 mb-0">
-                            <li class="mb-2"><i class="ri-checkbox-circle-fill text-success me-2"></i>Each hospital gets its own workspace, branding, currency, tax and timezone</li>
+                            <li class="mb-2"><i class="ri-checkbox-circle-fill text-success me-2"></i>Each hospital gets its own workspace, branding, tax and timezone, with amounts in whole rupees (Rs)</li>
                             <li class="mb-2"><i class="ri-checkbox-circle-fill text-success me-2"></i>Subscription plans unlock modules; upgrade any time</li>
                             <li class="mb-2"><i class="ri-checkbox-circle-fill text-success me-2"></i>Super Admin console: onboarding, invoicing, analytics, storage</li>
                             <li class="mb-2"><i class="ri-checkbox-circle-fill text-success me-2"></i>Custom roles with per-module permissions</li>
@@ -294,8 +294,8 @@ new #[Layout('layouts.landing')] class extends Component
                                     @if ($featured)<span class="badge bg-primary">Most popular</span>@endif
                                 </div>
                                 <p class="text-muted fs-13">{{ $plan->description }}</p>
-                                <div class="mb-1"><span class="amount">{{ money($plan->price_monthly, $plan->currency) }}</span><span class="text-muted"> / month</span></div>
-                                <p class="text-muted fs-12">or {{ money($plan->price_yearly, $plan->currency) }} / year · {{ $plan->trial_days }}-day free trial</p>
+                                <div class="mb-1"><span class="amount">{{ money($plan->price_monthly) }}</span><span class="text-muted"> / month</span></div>
+                                <p class="text-muted fs-12">or {{ money($plan->price_yearly) }} / year · {{ $plan->trial_days }}-day free trial</p>
                                 <ul class="list-unstyled fs-13 mb-4">
                                     @foreach ($moduleLabels as $key => $label)
                                         @php $included = in_array($key, $plan->modules ?? []) || ! empty(config("hms.modules.{$key}.core")); @endphp

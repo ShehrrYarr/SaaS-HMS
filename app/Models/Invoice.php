@@ -20,12 +20,12 @@ class Invoice extends Model
             'invoice_date' => 'date',
             'due_date' => 'date',
             'cancelled_at' => 'datetime',
-            'subtotal' => 'decimal:2',
-            'discount' => 'decimal:2',
-            'tax' => 'decimal:2',
-            'total' => 'decimal:2',
-            'paid_amount' => 'decimal:2',
-            'insurance_amount' => 'decimal:2',
+            'subtotal' => 'integer',
+            'discount' => 'integer',
+            'tax' => 'integer',
+            'total' => 'integer',
+            'paid_amount' => 'integer',
+            'insurance_amount' => 'integer',
         ];
     }
 
@@ -69,28 +69,28 @@ class Invoice extends Model
         return $this->hasMany(InsuranceClaim::class);
     }
 
-    public function getBalanceAttribute(): float
+    public function getBalanceAttribute(): int
     {
-        return round((float) $this->total - (float) $this->paid_amount - (float) $this->insurance_amount, 2);
+        return rupees($this->total - $this->paid_amount - $this->insurance_amount);
     }
 
     /** Recompute totals from items & payments and derive the status. */
     public function recalculate(): void
     {
         $items = $this->items()->get();
-        $subtotal = $items->sum(fn ($i) => (float) $i->quantity * (float) $i->unit_price);
+        $subtotal = $items->sum(fn ($i) => rupees((float) $i->quantity * $i->unit_price));
         $itemDiscount = $items->sum('discount');
         $tax = $items->sum('tax_amount');
         $paid = (float) $this->payments()->where('is_refund', false)->sum('amount') - (float) $this->payments()->where('is_refund', true)->sum('amount');
 
-        $this->subtotal = round($subtotal, 2);
-        $this->tax = round($tax, 2);
-        $this->total = round($subtotal - $itemDiscount - (float) $this->discount + $tax, 2);
-        $this->paid_amount = round($paid, 2);
+        $this->subtotal = $subtotal;
+        $this->tax = $tax;
+        $this->total = max(0, $subtotal - $itemDiscount - rupees($this->discount) + $tax);
+        $this->paid_amount = rupees($paid);
 
         if ($this->status !== 'cancelled' && $this->status !== 'draft') {
-            $balance = $this->total - $this->paid_amount - (float) $this->insurance_amount;
-            $this->status = $balance <= 0.009 ? 'paid' : ($this->paid_amount > 0 || $this->insurance_amount > 0 ? 'partial' : 'unpaid');
+            $balance = $this->total - $this->paid_amount - $this->insurance_amount;
+            $this->status = $balance <= 0 ? 'paid' : ($this->paid_amount > 0 || $this->insurance_amount > 0 ? 'partial' : 'unpaid');
         }
         $this->save();
     }

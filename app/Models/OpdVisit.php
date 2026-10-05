@@ -21,7 +21,7 @@ class OpdVisit extends Model
             'follow_up_date' => 'date',
             'consultation_started_at' => 'datetime',
             'consultation_ended_at' => 'datetime',
-            'fee' => 'decimal:2',
+            'fee' => 'integer',
         ];
     }
 

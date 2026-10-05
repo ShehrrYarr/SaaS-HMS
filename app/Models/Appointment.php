@@ -19,7 +19,7 @@ class Appointment extends Model
         return [
             'appointment_date' => 'date',
             'checked_in_at' => 'datetime',
-            'fee' => 'decimal:2',
+            'fee' => 'integer',
         ];
     }
 

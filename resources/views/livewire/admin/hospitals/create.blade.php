@@ -13,7 +13,7 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
 {
     public array $hospital = [
         'name' => '', 'slug' => '', 'code' => '', 'email' => '', 'phone' => '', 'address' => '', 'city' => '', 'state' => '',
-        'country' => '', 'currency' => 'USD', 'timezone' => 'UTC', 'tax_label' => 'Tax', 'tax_rate' => 0,
+        'country' => 'Pakistan', 'timezone' => 'UTC', 'tax_label' => 'Tax', 'tax_rate' => 0,
     ];
 
     public array $admin = ['name' => '', 'email' => '', 'phone' => '', 'password' => ''];
@@ -49,7 +49,6 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
             'hospital.city' => 'nullable|string|max:100',
             'hospital.state' => 'nullable|string|max:100',
             'hospital.country' => 'nullable|string|max:100',
-            'hospital.currency' => ['required', Rule::in(array_keys(config('hms.currencies')))],
             'hospital.timezone' => ['required', 'timezone'],
             'hospital.tax_label' => 'required|string|max:30',
             'hospital.tax_rate' => 'required|numeric|min:0|max:100',
@@ -78,7 +77,6 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
     {
         return [
             'plans' => Plan::where('is_active', true)->orderBy('sort_order')->get(),
-            'currencies' => collect(config('hms.currencies'))->mapWithKeys(fn ($s, $c) => [$c => "$c ($s)"])->all(),
             'timezones' => collect(timezone_identifiers_list())->mapWithKeys(fn ($t) => [$t => $t])->all(),
         ];
     }
@@ -102,8 +100,7 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
                         <x-form.input class="col-md-4" label="City" model="hospital.city" />
                         <x-form.input class="col-md-4" label="State / Province" model="hospital.state" />
                         <x-form.input class="col-md-4" label="Country" model="hospital.country" />
-                        <x-form.select class="col-md-3" label="Currency" model="hospital.currency" :options="$currencies" :placeholder="false" required />
-                        <x-form.search-select class="col-md-5" label="Timezone" model="hospital.timezone" :options="$timezones" required />
+                        <x-form.search-select class="col-md-8" label="Timezone" model="hospital.timezone" :options="$timezones" required />
                         <x-form.input class="col-md-2" label="Tax label" model="hospital.tax_label" />
                         <x-form.input class="col-md-2" label="Tax %" model="hospital.tax_rate" type="number" step="0.01" />
                     </div>
@@ -127,7 +124,7 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
                                 <div class="d-flex align-items-start gap-2">
                                     <input type="radio" class="form-check-input mt-1" value="{{ $plan->id }}" wire:model.live="plan_id">
                                     <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between"><strong>{{ $plan->name }}</strong><span>{{ money($plan->price_monthly, $plan->currency) }}/mo</span></div>
+                                        <div class="d-flex justify-content-between"><strong>{{ $plan->name }}</strong><span>{{ money($plan->price_monthly) }}/mo</span></div>
                                         <small class="text-muted d-block">{{ $plan->description }}</small>
                                         <small class="text-muted">{{ count($plan->modules ?? []) }} modules &middot; {{ $plan->trial_days }}-day trial</small>
                                     </div>

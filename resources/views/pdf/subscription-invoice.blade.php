@@ -34,14 +34,14 @@
     </table>
     <table class="grid" style="margin-top: 14px;">
         <thead><tr><th>Description</th><th>Period</th><th class="right">Amount</th></tr></thead>
-        <tbody><tr><td>{{ $invoice->plan->name }} plan — {{ ucfirst($invoice->billing_cycle) }} subscription</td><td>{{ $invoice->period_start->format('d M Y') }} – {{ $invoice->period_end->format('d M Y') }}</td><td class="right">{{ money($invoice->amount, $invoice->currency) }}</td></tr></tbody>
+        <tbody><tr><td>{{ $invoice->plan->name }} plan — {{ ucfirst($invoice->billing_cycle) }} subscription</td><td>{{ $invoice->period_start->format('d M Y') }} – {{ $invoice->period_end->format('d M Y') }}</td><td class="right">{{ money($invoice->amount) }}</td></tr></tbody>
     </table>
     <table style="margin-top: 8px;">
         <tr><td style="width: 60%;"></td><td>
             <table>
-                <tr><td>Subtotal</td><td class="right">{{ money($invoice->amount, $invoice->currency) }}</td></tr>
-                <tr><td>Tax</td><td class="right">{{ money($invoice->tax, $invoice->currency) }}</td></tr>
-                <tr><td><b>Total</b></td><td class="right"><b>{{ money($invoice->total, $invoice->currency) }}</b></td></tr>
+                <tr><td>Subtotal</td><td class="right">{{ money($invoice->amount) }}</td></tr>
+                <tr><td>Tax</td><td class="right">{{ money($invoice->tax) }}</td></tr>
+                <tr><td><b>Total</b></td><td class="right"><b>{{ money($invoice->total) }}</b></td></tr>
             </table>
         </td></tr>
     </table>

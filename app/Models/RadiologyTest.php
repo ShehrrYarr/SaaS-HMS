@@ -16,7 +16,7 @@ class RadiologyTest extends Model
     {
         return [
             'is_active' => 'boolean',
-            'price' => 'decimal:2',
+            'price' => 'integer',
         ];
     }
 

@@ -104,7 +104,7 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
             'form.mode' => 'required|in:in_person,video',
             'form.source' => 'required|in:walk_in,phone,online,portal',
             'form.reason' => 'nullable|string|max:255',
-            'form.fee' => 'nullable|numeric|min:0',
+            'form.fee' => 'nullable|integer|min:0',
         ], [], ['form.patient_id' => 'patient', 'form.doctor_id' => 'doctor', 'form.start_time' => 'time slot']);
 
         $appointment = $service->book(Patient::findOrFail($this->form['patient_id']), Staff::doctors()->findOrFail($this->form['doctor_id']), $this->form);
@@ -254,7 +254,7 @@ new #[Layout('layouts.app')] #[Title('Appointments')] class extends Component
             <x-form.search-select class="col-12" label="Patient" model="form.patient_id" search="searchPatients" :selected-label="$patientLabel" placeholder="Search by name, UHID or phone" required />
             <x-form.search-select class="col-md-6" label="Doctor" model="form.doctor_id" :options="$doctors" live required />
             <x-form.input class="col-md-3" label="Date" model="form.appointment_date" type="date" live required />
-            <x-form.input class="col-md-3" label="Fee" model="form.fee" type="number" step="0.01" />
+            <x-form.money class="col-md-3" label="Fee" model="form.fee" />
             <div class="col-12 mb-3">
                 <label class="form-label">Available slots <span class="text-danger">*</span></label>
                 @if (empty($form['doctor_id']))

@@ -49,7 +49,7 @@ return [
             'nurse' => ['email' => 'nurse@cityhospital.test', 'label' => 'Nurse', 'icon' => 'ri-heart-pulse-line', 'color' => 'danger', 'blurb' => 'Nurse station, vitals, bed matrix'],
             'pharmacist' => ['email' => 'pharmacist@cityhospital.test', 'label' => 'Pharmacist', 'icon' => 'ri-capsule-line', 'color' => 'warning', 'blurb' => 'POS, dispensing, stock & purchasing'],
             'lab' => ['email' => 'lab@cityhospital.test', 'label' => 'Lab Technician', 'icon' => 'ri-flask-line', 'color' => 'secondary', 'blurb' => 'Samples, barcodes, results & QC'],
-            'accounts' => ['email' => 'accounts@cityhospital.test', 'label' => 'Accountant', 'icon' => 'ri-money-dollar-circle-line', 'color' => 'success', 'blurb' => 'Invoices, claims, expenses, tax reports'],
+            'accounts' => ['email' => 'accounts@cityhospital.test', 'label' => 'Accountant', 'icon' => 'ri-money-rupee-circle-line', 'color' => 'success', 'blurb' => 'Invoices, claims, expenses, tax reports'],
             'patient' => ['email' => 'patient@cityhospital.test', 'label' => 'Patient Portal', 'icon' => 'ri-user-heart-line', 'color' => 'primary', 'blurb' => 'Appointments, reports, bills, video consult'],
         ],
     ],
@@ -66,6 +66,8 @@ return [
                 'audit.view' => 'View audit logs',
                 'subscription.manage' => 'View subscription & pay invoices',
                 'reports.view' => 'View dashboards & reports',
+                'banks.view' => 'View bank & cash balances and statements',
+                'banks.manage' => 'Add banks, record transfers & adjustments',
             ],
         ],
         'patients' => [
@@ -231,7 +233,7 @@ return [
         'Accountant' => [
             'reports.view', 'patients.view', 'billing.view', 'billing.create', 'billing.collect', 'billing.cancel',
             'billing.reports', 'insurance.manage', 'expenses.manage', 'hr.payroll', 'hr.commissions',
-            'pharmacy.reports',
+            'pharmacy.reports', 'banks.view', 'banks.manage',
         ],
         'HR Manager' => [
             'hr.staff', 'hr.shifts', 'hr.attendance', 'hr.payroll', 'hr.commissions', 'departments.manage',
@@ -246,8 +248,6 @@ return [
 
     'genders' => ['male' => 'Male', 'female' => 'Female', 'other' => 'Other'],
 
-    'currencies' => [
-        'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'PKR' => 'Rs', 'INR' => '₹', 'AED' => 'AED', 'SAR' => 'SAR',
-        'BDT' => '৳', 'NGN' => '₦', 'KES' => 'KSh', 'ZAR' => 'R', 'CAD' => 'C$', 'AUD' => 'A$',
-    ],
+    // One currency for the whole platform; every amount is a whole number of rupees.
+    'currency' => ['code' => 'PKR', 'symbol' => 'Rs'],
 ];

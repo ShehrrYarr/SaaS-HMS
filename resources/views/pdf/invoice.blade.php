@@ -43,10 +43,15 @@
                 @if ($invoice->payments->isNotEmpty())
                     <b>Payments</b>
                     <table class="grid small">
-                        @foreach ($invoice->payments as $p)<tr><td>{{ $p->payment_no }}</td><td>{{ $p->paid_at->format('d M Y') }}</td><td>{{ ucwords(str_replace('_', ' ', $p->method)) }}</td><td class="right">{{ $p->is_refund ? '-' : '' }}{{ money($p->amount) }}</td></tr>@endforeach
+                        @foreach ($invoice->payments as $p)<tr><td>{{ $p->payment_no }}</td><td>{{ $p->paid_at->format('d M Y') }}</td><td>{{ $p->accountLabel() }}</td><td class="right">{{ $p->is_refund ? '-' : '' }}{{ money($p->amount) }}</td></tr>@endforeach
                     </table>
                 @endif
                 @if ($invoice->notes)<p class="muted small">{!! nl2br(e($invoice->notes)) !!}</p>@endif
+                @if ($invoice->balance > 0 && ($banks = \App\Models\BankAccount::active()->where('type', 'bank')->where('show_to_patients', true)->orderBy('name')->get())->isNotEmpty())
+                    <p class="small" style="margin-top: 6px;"><b>Pay by bank transfer</b> (quote {{ $invoice->invoice_no }}):<br>
+                        @foreach ($banks as $b){{ $b->name }} · {{ $b->account_title }} · {{ $b->account_number }}@if ($b->iban) · IBAN {{ $b->iban }}@endif<br>@endforeach
+                    </p>
+                @endif
             </td>
             <td style="width: 45%; padding-left: 10px;">
                 <table class="totals">

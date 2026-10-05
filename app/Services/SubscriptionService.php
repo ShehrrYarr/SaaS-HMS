@@ -37,9 +37,9 @@ class SubscriptionService
             : today();
         $end = $cycle === 'yearly' ? $start->copy()->addYear()->subDay() : $start->copy()->addMonth()->subDay();
 
-        $amount = $plan->price($cycle);
+        $amount = rupees($plan->price($cycle));
         $taxPercent = (float) platform_setting('invoice_tax_percent', 0);
-        $tax = round($amount * $taxPercent / 100, 2);
+        $tax = rupees($amount * $taxPercent / 100);
 
         $invoice = new SubscriptionInvoice([
             'plan_id' => $plan->id,
@@ -50,14 +50,14 @@ class SubscriptionService
             'amount' => $amount,
             'tax' => $tax,
             'total' => $amount + $tax,
-            'currency' => $plan->currency,
+            'currency' => config('hms.currency.code'),
             'status' => 'unpaid',
             'due_date' => ($hospital->subscription_ends_at && $hospital->subscription_ends_at->isFuture() ? $hospital->subscription_ends_at : today()->addDays(7))->toDateString(),
         ]);
         $invoice->hospital_id = $hospital->id;
         $invoice->save();
 
-        $this->notifyAdmins($hospital, 'New subscription invoice', "Invoice {$invoice->number} for ".money($invoice->total, $invoice->currency).' is due on '.fmt_date($invoice->due_date), 'ri-bill-line', 'warning');
+        $this->notifyAdmins($hospital, 'New subscription invoice', "Invoice {$invoice->number} for ".money($invoice->total).' is due on '.fmt_date($invoice->due_date), 'ri-bill-line', 'warning');
 
         return $invoice;
     }

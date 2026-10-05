@@ -96,11 +96,6 @@ class Hospital extends Model
             : asset('assets/images/light-logo.png');
     }
 
-    public function currencySymbol(): string
-    {
-        return config("hms.currencies.{$this->currency}", $this->currency);
-    }
-
     public function fullAddress(): string
     {
         return collect([$this->address, $this->city, $this->state, $this->postal_code, $this->country])->filter()->join(', ');

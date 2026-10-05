@@ -23,7 +23,7 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
     public function create(): void
     {
         $this->editingId = null;
-        $this->form = ['name' => '', 'description' => '', 'price_monthly' => 0, 'price_yearly' => 0, 'currency' => 'USD', 'trial_days' => 14, 'is_active' => true, 'sort_order' => Plan::max('sort_order') + 1, 'modules' => []];
+        $this->form = ['name' => '', 'description' => '', 'price_monthly' => 0, 'price_yearly' => 0, 'trial_days' => 14, 'is_active' => true, 'sort_order' => Plan::max('sort_order') + 1, 'modules' => []];
         $this->resetValidation();
         $this->showForm = true;
     }
@@ -32,7 +32,7 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
     {
         $plan = Plan::findOrFail($id);
         $this->editingId = $id;
-        $this->form = $plan->only(['name', 'description', 'price_monthly', 'price_yearly', 'currency', 'trial_days', 'is_active', 'sort_order']) + ['modules' => $plan->modules ?? []];
+        $this->form = $plan->only(['name', 'description', 'price_monthly', 'price_yearly', 'trial_days', 'is_active', 'sort_order']) + ['modules' => $plan->modules ?? []];
         $this->resetValidation();
         $this->showForm = true;
     }
@@ -42,9 +42,8 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
         $data = $this->validate([
             'form.name' => 'required|string|max:80',
             'form.description' => 'nullable|string|max:255',
-            'form.price_monthly' => 'required|numeric|min:0',
-            'form.price_yearly' => 'required|numeric|min:0',
-            'form.currency' => ['required', Rule::in(array_keys(config('hms.currencies')))],
+            'form.price_monthly' => 'required|integer|min:0',
+            'form.price_yearly' => 'required|integer|min:0',
             'form.trial_days' => 'required|integer|min:0|max:365',
             'form.is_active' => 'boolean',
             'form.sort_order' => 'integer',
@@ -85,7 +84,6 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
         return [
             'plans' => Plan::withCount('hospitals')->orderBy('sort_order')->get(),
             'modules' => Plan::sellableModules(),
-            'currencies' => collect(config('hms.currencies'))->mapWithKeys(fn ($s, $c) => [$c => $c])->all(),
         ];
     }
 }; ?>
@@ -105,8 +103,8 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
                             @unless ($plan->is_active)<span class="badge bg-secondary">Inactive</span>@endunless
                         </div>
                         <p class="text-muted">{{ $plan->description }}</p>
-                        <h3 class="fw-bold mb-0">{{ money($plan->price_monthly, $plan->currency) }}<small class="fs-13 text-muted fw-normal"> / month</small></h3>
-                        <p class="text-muted fs-12">{{ money($plan->price_yearly, $plan->currency) }} / year &middot; {{ $plan->trial_days }}-day trial</p>
+                        <h3 class="fw-bold mb-0">{{ money($plan->price_monthly) }}<small class="fs-13 text-muted fw-normal"> / month</small></h3>
+                        <p class="text-muted fs-12">{{ money($plan->price_yearly) }} / year &middot; {{ $plan->trial_days }}-day trial</p>
                         <ul class="list-unstyled mb-3">
                             @foreach ($modules as $key => $label)
                                 <li class="{{ in_array($key, $plan->modules ?? []) ? '' : 'text-muted text-decoration-line-through' }}">
@@ -134,9 +132,8 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
             <x-form.input class="col-md-3" label="Trial days" model="form.trial_days" type="number" />
             <x-form.input class="col-md-3" label="Sort" model="form.sort_order" type="number" />
             <x-form.input class="col-12" label="Description" model="form.description" />
-            <x-form.input class="col-md-4" label="Monthly price" model="form.price_monthly" type="number" step="0.01" required />
-            <x-form.input class="col-md-4" label="Yearly price" model="form.price_yearly" type="number" step="0.01" required />
-            <x-form.select class="col-md-4" label="Currency" model="form.currency" :options="$currencies" :placeholder="false" />
+            <x-form.money class="col-md-6" label="Monthly price" model="form.price_monthly" required />
+            <x-form.money class="col-md-6" label="Yearly price" model="form.price_yearly" required />
             <div class="col-12">
                 <label class="form-label">Modules included</label>
                 <div class="row">

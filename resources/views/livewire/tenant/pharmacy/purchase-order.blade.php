@@ -49,7 +49,7 @@ new #[Layout('layouts.app')] #[Title('Purchase Order')] class extends Component
             'received.*.batch_no' => 'nullable|string|max:50',
             'received.*.expiry_date' => 'nullable|date|after:today',
             'received.*.mfg_date' => 'nullable|date|before_or_equal:today',
-            'received.*.sale_price' => 'nullable|numeric|min:0',
+            'received.*.sale_price' => 'nullable|integer|min:0',
         ]);
         foreach ($this->purchaseOrder->items as $item) {
             if ((int) ($this->received[$item->id]['quantity'] ?? 0) > $item->quantity - $item->received_qty) {
@@ -114,7 +114,7 @@ new #[Layout('layouts.app')] #[Title('Purchase Order')] class extends Component
                                             <td><input type="number" class="form-control form-control-sm @error('received.'.$item->id.'.quantity') is-invalid @enderror" style="width: 80px;" wire:model="received.{{ $item->id }}.quantity"></td>
                                             <td><input type="text" class="form-control form-control-sm @error('received.'.$item->id.'.batch_no') is-invalid @enderror" wire:model="received.{{ $item->id }}.batch_no"></td>
                                             <td><input type="date" class="form-control form-control-sm @error('received.'.$item->id.'.expiry_date') is-invalid @enderror" wire:model="received.{{ $item->id }}.expiry_date"></td>
-                                            <td><input type="number" step="0.01" class="form-control form-control-sm" style="width: 90px;" wire:model="received.{{ $item->id }}.sale_price"></td>
+                                            <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm" style="width: 90px;" wire:model="received.{{ $item->id }}.sale_price"></td>
                                         @else
                                             <td colspan="4" class="text-success fs-13"><i class="ri-check-line"></i> Fully received</td>
                                         @endif

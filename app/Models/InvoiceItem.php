@@ -17,11 +17,11 @@ class InvoiceItem extends Model
     {
         return [
             'quantity' => 'float',
-            'unit_price' => 'decimal:2',
-            'discount' => 'decimal:2',
+            'unit_price' => 'integer',
+            'discount' => 'integer',
             'tax_percent' => 'decimal:2',
-            'tax_amount' => 'decimal:2',
-            'total' => 'decimal:2',
+            'tax_amount' => 'integer',
+            'total' => 'integer',
         ];
     }
 

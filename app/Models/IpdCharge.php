@@ -18,8 +18,8 @@ class IpdCharge extends Model
         return [
             'charged_at' => 'datetime',
             'billed' => 'boolean',
-            'amount' => 'decimal:2',
-            'unit_price' => 'decimal:2',
+            'amount' => 'integer',
+            'unit_price' => 'integer',
             'quantity' => 'float',
         ];
     }

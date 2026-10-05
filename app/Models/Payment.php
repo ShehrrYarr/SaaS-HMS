@@ -17,7 +17,7 @@ class Payment extends Model
     {
         return [
             'paid_at' => 'datetime',
-            'amount' => 'decimal:2',
+            'amount' => 'integer',
             'is_refund' => 'boolean',
         ];
     }
@@ -35,5 +35,21 @@ class Payment extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
+    }
+
+    /** "Cash", "HBL · ****1234", "Insurance · HBL · ****1234" or the legacy method name. */
+    public function accountLabel(): string
+    {
+        $account = $this->account?->label;
+        if ($this->method === 'insurance' || $this->method === 'deposit') {
+            return label($this->method).($account ? ' · '.$account : '');
+        }
+
+        return $account ?? label($this->method);
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
     }
 }

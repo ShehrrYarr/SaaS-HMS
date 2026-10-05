@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\BankAccount;
 use App\Models\DoctorCommission;
 use App\Models\Payroll;
 use App\Models\Staff;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
  */
 class PayrollService
 {
+    public function __construct(protected LedgerService $ledger) {}
+
     public function generate(string $month): int
     {
         $start = Carbon::parse($month.'-01');
@@ -36,14 +39,14 @@ class PayrollService
                     ? $workingDays
                     : $attendance->whereIn('status', ['present', 'late', 'leave', 'holiday'])->count() + 0.5 * $attendance->where('status', 'half_day')->count();
                 $absentDays = max(0, $workingDays - $present);
-                $absenceDeduction = $attendance->isEmpty() ? 0 : round((float) $staff->basic_salary / max(1, $workingDays) * $absentDays, 2);
+                $absenceDeduction = $attendance->isEmpty() ? 0 : rupees($staff->basic_salary / max(1, $workingDays) * $absentDays);
 
                 $commissions = DoctorCommission::where('staff_id', $staff->id)->where('status', 'pending')
                     ->where(fn ($q) => $q->whereNull('payroll_id')->orWhere('payroll_id', $existing?->id))
                     ->whereDate('earned_at', '<=', $end->toDateString())->get();
-                $commission = round((float) $commissions->sum('amount'), 2);
+                $commission = rupees($commissions->sum('amount'));
 
-                $net = round((float) $staff->basic_salary + (float) $staff->allowances + $commission - (float) $staff->deductions - $absenceDeduction, 2);
+                $net = $staff->basic_salary + $staff->allowances + $commission - $staff->deductions - $absenceDeduction;
                 if ($net <= 0 && (float) $staff->basic_salary <= 0 && $commission <= 0) {
                     continue;
                 }
@@ -76,14 +79,19 @@ class PayrollService
         $payroll->update(['status' => 'approved']);
     }
 
-    public function pay(Payroll $payroll, string $method): void
+    /** Pay an approved payroll out of a bank / cash account ('cash' = the Cash account). */
+    public function pay(Payroll $payroll, BankAccount|int|string $account = 'cash'): void
     {
         if ($payroll->status !== 'approved') {
             throw ValidationException::withMessages(['payroll' => 'Approve the payroll before paying.']);
         }
-        DB::transaction(function () use ($payroll, $method) {
-            $payroll->update(['status' => 'paid', 'paid_at' => now(), 'payment_method' => $method]);
+        $account = $this->ledger->account($account);
+        DB::transaction(function () use ($payroll, $account) {
+            $payroll->update(['status' => 'paid', 'paid_at' => now(), 'payment_method' => $account->type, 'bank_account_id' => $account->id]);
             DoctorCommission::where('payroll_id', $payroll->id)->update(['status' => 'paid']);
+            if ($payroll->net_pay > 0) {
+                $this->ledger->moneyOut($account, $payroll->net_pay, 'salary', $payroll, "Salary {$payroll->month} · ".$payroll->staff?->name);
+            }
         });
     }
 }

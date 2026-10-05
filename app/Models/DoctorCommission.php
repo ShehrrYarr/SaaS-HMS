@@ -16,9 +16,9 @@ class DoctorCommission extends Model
     {
         return [
             'earned_at' => 'date',
-            'base_amount' => 'decimal:2',
+            'base_amount' => 'integer',
             'percent' => 'decimal:2',
-            'amount' => 'decimal:2',
+            'amount' => 'integer',
         ];
     }
 

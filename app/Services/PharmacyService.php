@@ -21,11 +21,14 @@ use Illuminate\Validation\ValidationException;
  */
 class PharmacyService
 {
-    public function __construct(protected BillingService $billing, protected IpdService $ipd) {}
+    public function __construct(protected BillingService $billing, protected IpdService $ipd, protected LedgerService $ledger) {}
 
     /**
-     * @param  array<int, array{medicine_id:int, quantity:int, unit_price?:float, discount?:float}>  $lines
-     * @param  array{patient_id?:int|null, customer_name?:string|null, customer_phone?:string|null, prescription_id?:int|null, ipd_admission_id?:int|null, payment_method?:string, paid_amount?:float, discount?:float, notes?:string|null}  $data
+     * Paid sales go into $data['bank_account_id'] (default: Cash); payment_method 'ipd_credit' instead
+     * posts the sale to the admitted patient's IPD bill.
+     *
+     * @param  array<int, array{medicine_id:int, quantity:int, unit_price?:int, discount?:int}>  $lines
+     * @param  array{patient_id?:int|null, customer_name?:string|null, customer_phone?:string|null, prescription_id?:int|null, ipd_admission_id?:int|null, payment_method?:string|null, bank_account_id?:int|string|null, discount?:int, notes?:string|null}  $data
      */
     public function sell(array $lines, array $data = []): PharmacySale
     {
@@ -34,7 +37,10 @@ class PharmacyService
             throw ValidationException::withMessages(['cart' => 'The cart is empty.']);
         }
 
-        return DB::transaction(function () use ($lines, $data) {
+        $isCredit = ($data['payment_method'] ?? null) === 'ipd_credit';
+        $account = $isCredit ? null : $this->ledger->account($data['bank_account_id'] ?? 'cash');
+
+        return DB::transaction(function () use ($lines, $data, $isCredit, $account) {
             $sale = PharmacySale::create([
                 'sale_no' => Sequence::code('pharmacy-sale', 'PH'),
                 'patient_id' => $data['patient_id'] ?? null,
@@ -42,7 +48,8 @@ class PharmacyService
                 'customer_phone' => $data['customer_phone'] ?? null,
                 'prescription_id' => $data['prescription_id'] ?? null,
                 'ipd_admission_id' => $data['ipd_admission_id'] ?? null,
-                'payment_method' => $data['payment_method'] ?? 'cash',
+                'payment_method' => $isCredit ? 'ipd_credit' : $account->type,
+                'bank_account_id' => $account?->id,
                 'notes' => $data['notes'] ?? null,
                 'sold_by' => auth()->id(),
             ]);
@@ -53,8 +60,8 @@ class PharmacyService
             foreach ($lines as $line) {
                 $medicine = Medicine::findOrFail($line['medicine_id']);
                 $remaining = (int) $line['quantity'];
-                $price = isset($line['unit_price']) ? (float) $line['unit_price'] : null;
-                $lineDiscount = (float) ($line['discount'] ?? 0);
+                $price = isset($line['unit_price']) ? rupees($line['unit_price']) : null;
+                $lineDiscount = rupees($line['discount'] ?? 0);
 
                 $batches = $medicine->sellableBatches()->lockForUpdate()->get();
                 if ($batches->sum('quantity_available') < $remaining) {
@@ -66,10 +73,10 @@ class PharmacyService
                         break;
                     }
                     $take = min($remaining, $batch->quantity_available);
-                    $unit = $price ?? (float) ($batch->sale_price > 0 ? $batch->sale_price : $medicine->sale_price);
+                    $unit = $price ?? ($batch->sale_price > 0 ? $batch->sale_price : $medicine->sale_price);
                     $gross = $take * $unit;
-                    $share = $line['quantity'] > 0 ? $lineDiscount * $take / $line['quantity'] : 0;
-                    $lineTax = round(($gross - $share) * (float) $medicine->tax_percent / 100, 2);
+                    $share = $line['quantity'] > 0 ? rupees($lineDiscount * $take / $line['quantity']) : 0;
+                    $lineTax = rupees(($gross - $share) * (float) $medicine->tax_percent / 100);
 
                     $sale->items()->create([
                         'medicine_id' => $medicine->id,
@@ -77,8 +84,8 @@ class PharmacyService
                         'quantity' => $take,
                         'unit_price' => $unit,
                         'tax_percent' => $medicine->tax_percent,
-                        'discount' => round($share, 2),
-                        'total' => round($gross - $share + $lineTax, 2),
+                        'discount' => $share,
+                        'total' => $gross - $share + $lineTax,
                     ]);
 
                     $this->move($batch, -$take, 'sale', $sale, "Sale {$sale->sale_no}");
@@ -89,15 +96,14 @@ class PharmacyService
                 }
             }
 
-            $discount = round($lineDiscounts + (float) ($data['discount'] ?? 0), 2);
-            $total = round($subtotal - $discount + $tax, 2);
-            $isCredit = ($data['payment_method'] ?? 'cash') === 'ipd_credit';
+            $discount = min($subtotal, $lineDiscounts + rupees($data['discount'] ?? 0));
+            $total = $subtotal - $discount + $tax;
             $sale->update([
-                'subtotal' => round($subtotal, 2),
+                'subtotal' => $subtotal,
                 'discount' => $discount,
-                'tax' => round($tax, 2),
+                'tax' => $tax,
                 'total' => $total,
-                'paid_amount' => $isCredit ? 0 : round((float) ($data['paid_amount'] ?? $total), 2),
+                'paid_amount' => $isCredit ? 0 : $total,
             ]);
 
             if ($sale->prescription_id) {
@@ -110,11 +116,15 @@ class PharmacyService
                     'category' => 'medicine', 'description' => "Pharmacy sale {$sale->sale_no}", 'unit_price' => $total, 'source' => $sale,
                 ]);
             } elseif ($sale->patient_id && hospital()?->hasModule('billing')) {
-                // Mirror into the patient's unified bill as a settled invoice.
+                // Mirror into the patient's unified bill as a settled invoice (the receipt posts to the account).
                 $invoice = $this->billing->createInvoice(Patient::findOrFail($sale->patient_id), [[
                     'service_type' => 'pharmacy', 'description' => "Pharmacy sale {$sale->sale_no}", 'unit_price' => $total, 'source' => $sale,
                 ]]);
-                $this->billing->addPayment($invoice, $invoice->balance, $sale->payment_method === 'ipd_credit' ? 'cash' : $sale->payment_method, $sale->sale_no);
+                if ($invoice->balance > 0) {
+                    $this->billing->addPayment($invoice, $invoice->balance, $account, $sale->sale_no);
+                }
+            } elseif ($total > 0) {
+                $this->ledger->moneyIn($account, $total, 'pharmacy', $sale, "Pharmacy sale {$sale->sale_no} · ".($sale->customer_name ?: 'Walk-in'));
             }
 
             return $sale->fresh(['items.medicine', 'items.batch']);

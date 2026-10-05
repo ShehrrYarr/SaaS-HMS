@@ -103,7 +103,7 @@ new #[Layout('layouts.app')] #[Title('Stock & Expiry')] class extends Component
     </x-page-header>
 
     <div class="row g-4 mb-4">
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="Stock value (cost)" :value="money($stats['value'])" icon="ri-money-dollar-box-line" color="primary" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="Stock value (cost)" :value="money($stats['value'])" icon="ri-money-rupee-circle-line" color="primary" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Low stock items" :value="$stats['low']" icon="ri-arrow-down-circle-line" color="danger" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Expiring ≤ {{ $alertDays }} days" :value="$stats['expiring']" icon="ri-alarm-warning-line" color="warning" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Expired (in stock)" :value="$stats['expired']" icon="ri-close-circle-line" color="danger" /></div>

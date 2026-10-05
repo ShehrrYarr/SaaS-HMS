@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -61,7 +63,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
             $out = fopen('php://output', 'w');
             fputcsv($out, ['Service', 'Taxable value', $label, 'Gross']);
             foreach ($rows as $r) {
-                fputcsv($out, [$r['label'], number_format($r['taxable'], 2, '.', ''), number_format($r['tax'], 2, '.', ''), number_format($r['total'], 2, '.', '')]);
+                fputcsv($out, [$r['label'], rupees($r['taxable']), rupees($r['tax']), rupees($r['total'])]);
             }
             fclose($out);
         }, 'tax-report-'.$this->from.'-to-'.$this->to.'.csv', ['Content-Type' => 'text/csv']);
@@ -80,7 +82,10 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
 
         $byService = InvoiceItem::query()->whereHas('invoice', fn ($q) => $q->where('status', '!=', 'cancelled')->whereBetween('invoice_date', [$this->from, $this->to]))
             ->toBase()->selectRaw('service_type, sum(total) total')->groupBy('service_type')->orderByDesc('total')->pluck('total', 'service_type');
-        $byMethod = (clone $payments)->toBase()->selectRaw('method, sum(case when is_refund = 1 then -amount else amount end) total')->groupBy('method')->pluck('total', 'method');
+        // Net patient money per bank / cash account (receipts, counter sales, deposits, insurance settlements − refunds).
+        $byAccount = BankTransaction::whereBetween('transacted_at', $range)->whereIn('type', ['receipt', 'insurance', 'pharmacy', 'deposit', 'refund'])->toBase()
+            ->selectRaw("bank_account_id, sum(case when direction = 'in' then amount else -amount end) total")->groupBy('bank_account_id')->pluck('total', 'bank_account_id');
+        $accountNames = BankAccount::whereIn('id', $byAccount->keys())->get()->mapWithKeys(fn ($a) => [$a->id => $a->label]);
 
         $days = collect(CarbonPeriod::create($this->from, min(\Carbon\Carbon::parse($this->to), \Carbon\Carbon::parse($this->from)->addDays(92))))->map->toDateString();
         $dailyIn = Payment::whereBetween('paid_at', $range)->where('is_refund', false)->get(['paid_at', 'amount'])->groupBy(fn ($p) => $p->paid_at->toDateString())->map->sum('amount');
@@ -108,11 +113,11 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
                 'net' => $collected - $refunds + $walkInPharmacy - $expenses,
                 'outstanding' => array_sum($aging),
             ],
-            'serviceChart' => $byService->isNotEmpty() ? ['chart' => ['type' => 'donut', 'height' => 300], 'series' => $byService->values()->map(fn ($v) => round((float) $v, 2)), 'labels' => $byService->keys()->map(fn ($k) => strtoupper($k)), 'legend' => ['position' => 'bottom']] : null,
-            'methodChart' => $byMethod->isNotEmpty() ? ['chart' => ['type' => 'bar', 'height' => 300], 'series' => [['name' => 'Collected', 'data' => $byMethod->values()->map(fn ($v) => round((float) $v, 2))]], 'xaxis' => ['categories' => $byMethod->keys()->map(fn ($k) => label($k))], 'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4]]] : null,
+            'serviceChart' => $byService->isNotEmpty() ? ['chart' => ['type' => 'donut', 'height' => 300], 'series' => $byService->values()->map(fn ($v) => rupees($v)), 'labels' => $byService->keys()->map(fn ($k) => strtoupper($k)), 'legend' => ['position' => 'bottom']] : null,
+            'methodChart' => $byAccount->isNotEmpty() ? ['chart' => ['type' => 'bar', 'height' => 300], 'series' => [['name' => 'Collected', 'data' => $byAccount->values()->map(fn ($v) => rupees($v))]], 'xaxis' => ['categories' => $byAccount->keys()->map(fn ($k) => $accountNames[$k] ?? 'Account #'.$k)], 'plotOptions' => ['bar' => ['horizontal' => true, 'borderRadius' => 4]]] : null,
             'trendChart' => ['chart' => ['type' => 'area', 'height' => 300], 'series' => [
-                ['name' => 'Collections', 'data' => $days->map(fn ($d) => round((float) ($dailyIn[$d] ?? 0), 2))->values()],
-                ['name' => 'Expenses', 'data' => $days->map(fn ($d) => round((float) ($dailyOut[$d] ?? 0), 2))->values()],
+                ['name' => 'Collections', 'data' => $days->map(fn ($d) => rupees($dailyIn[$d] ?? 0))->values()],
+                ['name' => 'Expenses', 'data' => $days->map(fn ($d) => rupees($dailyOut[$d] ?? 0))->values()],
             ], 'xaxis' => ['categories' => $days->map(fn ($d) => \Carbon\Carbon::parse($d)->format('d M'))->values()], 'dataLabels' => ['enabled' => false], 'stroke' => ['curve' => 'smooth', 'width' => 2]],
             'taxRows' => $this->taxRows(),
             'aging' => $aging,
@@ -134,7 +139,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
 
     <div class="row g-4 mb-4">
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Gross billed" :value="money($kpi['billed'])" icon="ri-file-list-3-line" color="primary" :hint="'Discounts '.money($kpi['discount']).' · '.hospital()->tax_label.' '.money($kpi['tax'])" /></div>
-        <div class="col-sm-6 col-xl-3"><x-stat-card title="Net collections" :value="money($kpi['collected'])" icon="ri-money-dollar-circle-line" color="success" :hint="'Refunds '.money($kpi['refunds'])" /></div>
+        <div class="col-sm-6 col-xl-3"><x-stat-card title="Net collections" :value="money($kpi['collected'])" icon="ri-money-rupee-circle-line" color="success" :hint="'Refunds '.money($kpi['refunds'])" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Expenses" :value="money($kpi['expenses'])" icon="ri-shopping-bag-line" color="danger" /></div>
         <div class="col-sm-6 col-xl-3"><x-stat-card title="Net cash flow" :value="money($kpi['net'])" icon="ri-scales-3-line" :color="$kpi['net'] >= 0 ? 'success' : 'danger'" :hint="'Outstanding receivables '.money($kpi['outstanding'])" /></div>
     </div>
@@ -170,7 +175,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
         </div>
         <div class="col-xl-6">
             <div class="card">
-                <div class="card-header"><h6 class="card-title mb-0">Collections by payment method</h6></div>
+                <div class="card-header"><h6 class="card-title mb-0">Collections by bank / cash account</h6></div>
                 <div class="card-body" wire:key="meth-{{ $from }}-{{ $to }}">@if ($methodChart)<div x-data="apexChart(@js($methodChart))" wire:ignore></div>@else<p class="text-muted text-center py-4 mb-0">No payments in period.</p>@endif</div>
             </div>
             <div class="card mb-0">

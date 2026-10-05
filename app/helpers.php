@@ -21,18 +21,28 @@ if (! function_exists('hospital')) {
 }
 
 if (! function_exists('currency_symbol')) {
-    function currency_symbol(?string $currency = null): string
+    /** The whole platform works in Pakistani rupees. */
+    function currency_symbol(): string
     {
-        $currency ??= hospital()?->currency ?? 'USD';
+        return config('hms.currency.symbol', 'Rs');
+    }
+}
 
-        return config("hms.currencies.{$currency}", $currency);
+if (! function_exists('rupees')) {
+    /** Round an amount to whole rupees (nearest; .5 rounds up). */
+    function rupees(float|int|string|null $amount): int
+    {
+        return (int) round((float) $amount, 0, PHP_ROUND_HALF_UP);
     }
 }
 
 if (! function_exists('money')) {
-    function money(float|int|string|null $amount, ?string $currency = null): string
+    /** e.g. "Rs 1,250" — amounts are always whole rupees. */
+    function money(float|int|string|null $amount): string
     {
-        return currency_symbol($currency).' '.number_format((float) $amount, 2);
+        $value = rupees($amount);
+
+        return ($value < 0 ? '-' : '').currency_symbol().' '.number_format(abs($value));
     }
 }
 
@@ -125,6 +135,14 @@ if (! function_exists('tenant_exists')) {
     function tenant_exists(string $table, string $column = 'id'): \Illuminate\Validation\Rules\Exists
     {
         return \Illuminate\Validation\Rule::exists($table, $column)->where('hospital_id', tenancy()->id() ?? 0);
+    }
+}
+
+if (! function_exists('bank_account_exists')) {
+    /** Validation rule: an active bank / cash account of the current hospital. */
+    function bank_account_exists(): \Illuminate\Validation\Rules\Exists
+    {
+        return tenant_exists('bank_accounts')->where('is_active', true);
     }
 }
 

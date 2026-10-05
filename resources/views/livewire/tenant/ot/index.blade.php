@@ -67,7 +67,7 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
             'form.scheduled_end' => 'required|date|after:form.scheduled_start',
             'form.surgeon_id' => ['required', doctor_exists()],
             'form.anesthesia_type' => 'nullable|string|max:30',
-            'form.charges' => 'nullable|numeric|min:0',
+            'form.charges' => 'nullable|integer|min:0',
             'form.pre_op_notes' => 'nullable|string|max:2000',
             'team.*.staff_id' => ['required', tenant_exists('staff')],
             'team.*.role' => 'required|in:'.implode(',', array_keys(Surgery::TEAM_ROLES)),
@@ -171,7 +171,7 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
             <x-form.input class="col-md-3" label="End" model="form.scheduled_end" type="datetime-local" required />
             <x-form.search-select class="col-md-4" label="Primary surgeon" model="form.surgeon_id" :options="$doctors" required />
             <x-form.select class="col-md-4" label="Anesthesia" model="form.anesthesia_type" :options="['general' => 'General', 'spinal' => 'Spinal', 'epidural' => 'Epidural', 'regional' => 'Regional block', 'local' => 'Local', 'sedation' => 'Sedation']" />
-            <x-form.input class="col-md-4" label="OT charges" model="form.charges" type="number" step="0.01" />
+            <x-form.money class="col-md-4" label="OT charges" model="form.charges" />
             <x-form.textarea class="col-12" label="Pre-op notes" model="form.pre_op_notes" rows="2" />
         </div>
         <h6>Surgical team</h6>

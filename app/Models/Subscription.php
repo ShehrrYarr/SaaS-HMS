@@ -17,7 +17,7 @@ class Subscription extends Model
         return [
             'starts_at' => 'date',
             'ends_at' => 'date',
-            'amount' => 'decimal:2',
+            'amount' => 'integer',
         ];
     }
 

@@ -20,9 +20,9 @@ class SubscriptionInvoice extends Model
             'period_end' => 'date',
             'due_date' => 'date',
             'paid_at' => 'datetime',
-            'amount' => 'decimal:2',
-            'tax' => 'decimal:2',
-            'total' => 'decimal:2',
+            'amount' => 'integer',
+            'tax' => 'integer',
+            'total' => 'integer',
         ];
     }
 

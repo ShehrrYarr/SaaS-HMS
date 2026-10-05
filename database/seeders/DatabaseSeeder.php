@@ -37,17 +37,17 @@ class DatabaseSeeder extends Seeder
 
         $basic = Plan::updateOrCreate(['slug' => 'basic'], [
             'name' => 'Basic', 'description' => 'Clinics: OPD, appointments, pharmacy & billing.',
-            'price_monthly' => 49, 'price_yearly' => 490, 'trial_days' => 14, 'sort_order' => 1,
+            'price_monthly' => 15000, 'price_yearly' => 150000, 'trial_days' => 14, 'sort_order' => 1,
             'modules' => ['appointments', 'opd', 'pharmacy', 'billing', 'portal'],
         ]);
         Plan::updateOrCreate(['slug' => 'professional'], [
             'name' => 'Professional', 'description' => 'Hospitals: adds IPD, laboratory, radiology, HR & telemedicine.',
-            'price_monthly' => 149, 'price_yearly' => 1490, 'trial_days' => 14, 'sort_order' => 2,
+            'price_monthly' => 35000, 'price_yearly' => 350000, 'trial_days' => 14, 'sort_order' => 2,
             'modules' => ['appointments', 'opd', 'ipd', 'pharmacy', 'laboratory', 'radiology', 'billing', 'hr', 'telemedicine', 'portal'],
         ]);
         $enterprise = Plan::updateOrCreate(['slug' => 'enterprise'], [
             'name' => 'Enterprise', 'description' => 'Everything, including OT & blood bank.',
-            'price_monthly' => 299, 'price_yearly' => 2990, 'trial_days' => 30, 'sort_order' => 3,
+            'price_monthly' => 75000, 'price_yearly' => 750000, 'trial_days' => 30, 'sort_order' => 3,
             'modules' => array_keys(Plan::sellableModules()),
         ]);
 
@@ -60,7 +60,7 @@ class DatabaseSeeder extends Seeder
         PlatformSetting::put([
             'platform_name' => config('app.name'),
             'support_email' => 'support@hms.test',
-            'bank_details' => "Bank: Example Bank\nAccount title: HMS Cloud Ltd\nAccount no: 0000 1111 2222\nSWIFT/IBAN: EXAMPLE123",
+            'bank_details' => "Bank: Meezan Bank\nAccount title: HMS Cloud (Pvt) Ltd\nAccount no: 0101 0123456789\nIBAN: PK24MEZN0001010123456789",
             'invoice_tax_percent' => '0',
             'invoice_footer' => 'Thank you for choosing HMS Cloud.',
         ]);

@@ -90,6 +90,7 @@ class Menu
                     ['label' => 'Service Charges', 'route' => 'tenant.billing.services', 'can' => ['billing.create']],
                     ['label' => 'Financial Reports', 'route' => 'tenant.billing.reports', 'can' => ['billing.reports']],
                 ]],
+                ['label' => 'Banks & Cash', 'icon' => 'ri-bank-line', 'route' => 'tenant.banks.index', 'can' => ['banks.view']],
                 ['label' => 'HR & Payroll', 'icon' => 'ri-team-line', 'module' => 'hr', 'can' => ['hr.staff', 'hr.shifts', 'hr.attendance', 'hr.payroll', 'hr.commissions'], 'children' => [
                     ['label' => 'Staff Directory', 'route' => 'tenant.hr.staff', 'can' => ['hr.staff']],
                     ['label' => 'Shifts & Roster', 'route' => 'tenant.hr.shifts', 'can' => ['hr.shifts']],

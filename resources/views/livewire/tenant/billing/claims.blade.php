@@ -51,6 +51,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
             'status' => $c->status, 'policy_no' => (string) $c->policy_no, 'claim_amount' => (string) $c->claim_amount, 'approved_amount' => (string) $c->approved_amount,
             'settled_amount' => (string) $c->settled_amount, 'submitted_at' => $c->submitted_at?->toDateString() ?? '', 'settled_at' => $c->settled_at?->toDateString() ?? '',
             'rejection_reason' => (string) $c->rejection_reason, 'notes' => (string) $c->notes,
+            'settle_account' => (string) \App\Models\BankAccount::active()->where('type', 'bank')->value('id') ?: (string) \App\Models\BankAccount::cash()->id,
         ];
         $this->resetValidation();
         $this->showEdit = true;
@@ -62,17 +63,18 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
         $this->validate([
             'form.status' => 'required|in:draft,submitted,under_review,approved,partially_approved,rejected,settled',
             'form.policy_no' => 'nullable|string|max:100',
-            'form.claim_amount' => 'required|numeric|min:0',
-            'form.approved_amount' => 'nullable|numeric|min:0',
-            'form.settled_amount' => 'nullable|numeric|min:0',
+            'form.claim_amount' => 'required|integer|min:0',
+            'form.approved_amount' => 'nullable|integer|min:0',
+            'form.settled_amount' => 'nullable|integer|min:0',
+            'form.settle_account' => ['required', bank_account_exists()],
             'form.submitted_at' => 'nullable|date',
             'form.settled_at' => 'nullable|date',
             'form.rejection_reason' => 'nullable|string|max:255',
             'form.notes' => 'nullable|string|max:1000',
-        ]);
+        ], [], ['form.settle_account' => 'settlement account']);
         $c = InsuranceClaim::with('invoice')->findOrFail($this->claim);
-        $before = (float) $c->settled_amount;
-        $data = array_map(fn ($v) => $v === '' ? null : $v, $this->form);
+        $before = $c->settled_amount;
+        $data = array_map(fn ($v) => $v === '' ? null : $v, \Illuminate\Support\Arr::except($this->form, 'settle_account'));
         if ($data['status'] === 'submitted' && ! $data['submitted_at']) {
             $data['submitted_at'] = today()->toDateString();
         }
@@ -86,9 +88,10 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
             if (in_array($c->status, ['approved', 'partially_approved', 'settled'])) {
                 $c->invoice->update(['insurance_amount' => 0]);
                 $c->invoice->recalculate();
-                $delta = round((float) $c->settled_amount - $before, 2);
-                if ($delta > 0) {
-                    $billing->addPayment($c->invoice->fresh(), min($delta, max(0, $c->invoice->fresh()->balance)), 'insurance', $c->claim_no, false, 'TPA settlement');
+                $delta = $c->settled_amount - $before;
+                $payable = min($delta, max(0, $c->invoice->fresh()->balance));
+                if ($payable > 0) {
+                    $billing->addPayment($c->invoice->fresh(), $payable, $this->form['settle_account'], $c->claim_no, false, 'TPA settlement', 'insurance');
                 }
             } elseif ($c->status === 'rejected') {
                 $c->invoice->update(['insurance_amount' => 0]);
@@ -190,14 +193,15 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
             <x-form.select class="col-md-4" label="Status" model="form.status" :options="collect($statuses)->mapWithKeys(fn ($s) => [$s => label($s)])->all()" :placeholder="false" />
             <x-form.input class="col-md-4" label="Policy no." model="form.policy_no" />
             <x-form.input class="col-md-4" label="Submitted on" model="form.submitted_at" type="date" />
-            <x-form.input class="col-md-4" label="Claim amount" model="form.claim_amount" type="number" step="0.01" />
-            <x-form.input class="col-md-4" label="Approved amount" model="form.approved_amount" type="number" step="0.01" />
-            <x-form.input class="col-md-4" label="Settled amount" model="form.settled_amount" type="number" step="0.01" />
+            <x-form.money class="col-md-4" label="Claim amount" model="form.claim_amount" />
+            <x-form.money class="col-md-4" label="Approved amount" model="form.approved_amount" />
+            <x-form.money class="col-md-4" label="Settled amount" model="form.settled_amount" />
             <x-form.input class="col-md-4" label="Settled on" model="form.settled_at" type="date" />
-            <x-form.input class="col-md-8" label="Rejection / deduction reason" model="form.rejection_reason" />
+            <x-form.account class="col-md-8" label="Settlement received in" model="form.settle_account" />
+            <x-form.input class="col-12" label="Rejection / deduction reason" model="form.rejection_reason" />
             <x-form.textarea class="col-12" label="Notes" model="form.notes" rows="2" />
         </div>
-        <p class="fs-12 text-muted mb-0">Settled amounts are posted to the invoice as “insurance” payments automatically.</p>
+        <p class="fs-12 text-muted mb-0">Settled amounts are posted to the invoice as “insurance” payments and added to the chosen bank / cash account.</p>
         <x-slot:footer><button class="btn btn-light" x-on:click="show = false">Cancel</button><button class="btn btn-primary" wire:click="save">Save</button></x-slot:footer>
     </x-modal>
 

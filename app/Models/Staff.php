@@ -22,11 +22,11 @@ class Staff extends Model
         return [
             'date_of_birth' => 'date',
             'joining_date' => 'date',
-            'basic_salary' => 'decimal:2',
-            'allowances' => 'decimal:2',
-            'deductions' => 'decimal:2',
-            'consultation_fee' => 'decimal:2',
-            'follow_up_fee' => 'decimal:2',
+            'basic_salary' => 'integer',
+            'allowances' => 'integer',
+            'deductions' => 'integer',
+            'consultation_fee' => 'integer',
+            'follow_up_fee' => 'integer',
             'commission_percent' => 'decimal:2',
         ];
     }

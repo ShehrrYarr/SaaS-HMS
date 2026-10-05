@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Concerns\WithTable;
+use App\Models\BankAccount;
 use App\Models\Payment;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -21,8 +22,9 @@ new #[Layout('layouts.app')] #[Title('Payments')] class extends Component
     #[Url]
     public string $to = '';
 
+    /** Bank / cash account id, or "deposit" for advance-deposit adjustments. */
     #[Url]
-    public string $method = '';
+    public string $account = '';
 
     public function mount(): void
     {
@@ -35,15 +37,22 @@ new #[Layout('layouts.app')] #[Title('Payments')] class extends Component
         $filters = fn ($q) => $q
             ->when($this->from, fn ($q) => $q->whereDate('paid_at', '>=', $this->from))
             ->when($this->to, fn ($q) => $q->whereDate('paid_at', '<=', $this->to))
-            ->when($this->method, fn ($q) => $q->where('method', $this->method))
+            ->when(is_numeric($this->account), fn ($q) => $q->where('bank_account_id', $this->account))
+            ->when($this->account === 'deposit', fn ($q) => $q->where('method', 'deposit'))
             ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('payment_no', 'like', "%{$this->search}%")->orWhere('reference', 'like', "%{$this->search}%")->orWhereHas('patient', fn ($p) => $p->search($this->search))));
 
-        $byMethod = $filters(Payment::query())->toBase()->selectRaw('method, sum(case when is_refund = 1 then -amount else amount end) total')->groupBy('method')->pluck('total', 'method');
+        $accounts = BankAccount::ordered()->get()->keyBy('id');
+        $byAccount = $filters(Payment::query())->toBase()
+            ->selectRaw("bank_account_id, case when bank_account_id is null then method end as method, sum(case when is_refund = 1 then -amount else amount end) total")
+            ->groupByRaw('bank_account_id, case when bank_account_id is null then method end')->get()
+            ->groupBy(fn ($r) => $r->bank_account_id ? ($accounts[$r->bank_account_id]?->label ?? 'Account #'.$r->bank_account_id) : label($r->method))
+            ->map(fn ($rows) => (float) $rows->sum('total'));
 
         return [
-            'payments' => $this->applySort($filters(Payment::with(['patient', 'invoice', 'receiver'])))->paginate($this->perPage),
-            'byMethod' => $byMethod,
-            'net' => $byMethod->sum(),
+            'payments' => $this->applySort($filters(Payment::with(['patient', 'invoice', 'receiver', 'account'])))->paginate($this->perPage),
+            'byAccount' => $byAccount,
+            'net' => $byAccount->sum(),
+            'accounts' => $accounts->map->label,
         ];
     }
 }; ?>
@@ -53,8 +62,8 @@ new #[Layout('layouts.app')] #[Title('Payments')] class extends Component
 
     <div class="row g-3 mb-4">
         <div class="col-md-3"><x-stat-card title="Net collected" :value="money($net)" icon="ri-wallet-3-line" color="success" /></div>
-        @foreach ($byMethod as $m => $t)
-            <div class="col-md-3 col-xl-2"><x-stat-card :title="label($m)" :value="money($t)" icon="ri-bank-card-line" color="info" /></div>
+        @foreach ($byAccount as $name => $t)
+            <div class="col-md-3 col-xl-2"><x-stat-card :title="$name" :value="money($t)" :icon="$name === 'Cash' ? 'ri-money-rupee-circle-line' : 'ri-bank-line'" color="info" /></div>
         @endforeach
     </div>
 
@@ -62,11 +71,11 @@ new #[Layout('layouts.app')] #[Title('Payments')] class extends Component
         <x-table-toolbar placeholder="Receipt #, reference or patient...">
             <input type="date" class="form-control w-auto" wire:model.live="from">
             <input type="date" class="form-control w-auto" wire:model.live="to">
-            <select class="form-select w-auto" wire:model.live="method"><option value="">All methods</option>@foreach (['cash', 'card', 'bank_transfer', 'online', 'cheque', 'insurance'] as $m)<option value="{{ $m }}">{{ label($m) }}</option>@endforeach</select>
+            <select class="form-select w-auto" wire:model.live="account"><option value="">All accounts</option>@foreach ($accounts as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach<option value="deposit">Advance deposit adjustments</option></select>
         </x-table-toolbar>
         <div class="table-responsive">
             <table class="table table-hms table-hover mb-0">
-                <thead class="table-light"><tr><th>Receipt</th><x-th field="paid_at" :sort="$sortField" :dir="$sortDirection">Date</x-th><th>Patient</th><th>Invoice</th><th>Method</th><th>Reference</th><th>Received by</th><x-th field="amount" :sort="$sortField" :dir="$sortDirection" class="text-end">Amount</x-th></tr></thead>
+                <thead class="table-light"><tr><th>Receipt</th><x-th field="paid_at" :sort="$sortField" :dir="$sortDirection">Date</x-th><th>Patient</th><th>Invoice</th><th>Account</th><th>Reference</th><th>Received by</th><x-th field="amount" :sort="$sortField" :dir="$sortDirection" class="text-end">Amount</x-th></tr></thead>
                 <tbody>
                     @forelse ($payments as $p)
                         <tr class="{{ $p->is_refund ? 'table-warning' : '' }}">
@@ -74,7 +83,7 @@ new #[Layout('layouts.app')] #[Title('Payments')] class extends Component
                             <td>{{ fmt_datetime($p->paid_at) }}</td>
                             <td>{{ $p->patient->full_name }}</td>
                             <td><a href="{{ route('tenant.billing.show', $p->invoice) }}" wire:navigate>{{ $p->invoice->invoice_no }}</a></td>
-                            <td>{{ label($p->method) }}</td>
+                            <td>{{ $p->accountLabel() }}</td>
                             <td class="fs-12">{{ $p->reference }}</td>
                             <td class="fs-12">{{ $p->receiver?->name }}</td>
                             <td class="text-end">{{ $p->is_refund ? '-' : '' }}{{ money($p->amount) }}</td>

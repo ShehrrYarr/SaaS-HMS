@@ -19,7 +19,7 @@ class AppointmentService
     public function availableSlots(Staff $doctor, string $date, ?int $ignoreAppointmentId = null): array
     {
         $day = Carbon::parse($date);
-        if ($doctor->leaves()->whereDate('date', $day)->exists()) {
+        if ($day->lt(today()) || $doctor->leaves()->whereDate('date', $day)->exists()) {
             return [];
         }
 

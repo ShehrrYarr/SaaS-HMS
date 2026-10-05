@@ -70,7 +70,18 @@ new #[Layout('layouts.guest')] #[Title('Patient Portal')] class extends Componen
 
         $value = trim($this->identifier);
         $phone = normalize_phone($value);
-        $patient = Patient::whereNotNull('user_id')->where(fn ($q) => $q->where('uhid', $value)->orWhere('phone', $phone))->first();
+        // A UHID is exact. A phone can belong to several records (a family sharing one number), and picking
+        // the first would send that person's code to the others, so ask for the UHID instead.
+        $patient = Patient::whereNotNull('user_id')->where('uhid', $value)->first();
+        if (! $patient) {
+            $matches = Patient::whereNotNull('user_id')->where('phone', $phone)->limit(2)->get();
+            if ($matches->count() > 1) {
+                $this->addError('identifier', 'This phone number is linked to more than one patient. Please sign in with your UHID (it is on your hospital card).');
+
+                return;
+            }
+            $patient = $matches->first();
+        }
         $user = $patient?->user;
 
         if (! $patient || ! $user || ! $user->isActive() || ! $patient->phone) {

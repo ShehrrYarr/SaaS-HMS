@@ -13,7 +13,7 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
 {
     public array $hospital = [
         'name' => '', 'slug' => '', 'code' => '', 'email' => '', 'phone' => '', 'address' => '', 'city' => '', 'state' => '',
-        'country' => 'Pakistan', 'timezone' => 'UTC', 'tax_label' => 'Tax', 'tax_rate' => 0,
+        'country' => 'Pakistan', 'timezone' => 'Asia/Karachi', 'tax_label' => 'Tax', 'tax_rate' => 0,
     ];
 
     public array $admin = ['name' => '', 'email' => '', 'phone' => '', 'password' => ''];

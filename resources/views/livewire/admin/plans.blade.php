@@ -49,7 +49,7 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
             'form.sort_order' => 'integer',
             'form.modules' => 'array',
             'form.modules.*' => Rule::in(array_keys(Plan::sellableModules())),
-        ])['form'];
+        ], [], ['form.price_monthly' => 'monthly price', 'form.price_yearly' => 'yearly price', 'form.trial_days' => 'trial days'])['form'];
 
         if ($this->editingId) {
             $plan = Plan::findOrFail($this->editingId);

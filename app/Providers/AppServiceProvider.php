@@ -11,6 +11,7 @@ use App\Models\AuditLog;
 use App\Models\IpdAdmission;
 use App\Models\OpdVisit;
 use App\Models\User;
+use App\Support\FriendlyValidator;
 use App\Support\Livewire\SubdirectoryHandleRequests;
 use App\Support\Permissions;
 use App\Support\Tenancy;
@@ -22,6 +23,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
@@ -45,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Paginator::useBootstrapFive();
+
+        // Readable field names in validation messages ("unit price", not "items.0.unit_price").
+        Validator::resolver(fn ($translator, $data, $rules, $messages, $attributes) => new FriendlyValidator($translator, $data, $rules, $messages, $attributes));
 
         Relation::morphMap([
             'opd_visit' => OpdVisit::class,

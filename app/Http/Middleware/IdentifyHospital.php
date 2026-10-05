@@ -46,14 +46,10 @@ class IdentifyHospital
         View::share('currentHospital', $hospital);
 
         $user = Auth::user();
-        if ($user && $user->hospital_id !== $hospital->id) {
-            // Logged into another hospital (or platform) – do not leak this tenant.
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect()->route('tenant.login')
-                ->with('error', 'Please sign in with an account for '.$hospital->name.'.');
+        if ($user && $user->hospital_id !== $hospital->id && ! $request->routeIs('tenant.logout', 'portal.logout')) {
+            // Signed in to another hospital (or the platform): never show this tenant, but don't
+            // sign the account out by surprise either – offer "go back" or "sign out and continue".
+            return response()->view('errors.signed-in-elsewhere', ['hospital' => $hospital, 'user' => $user], 403);
         }
 
         if ($user && ! $user->isActive()) {

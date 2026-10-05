@@ -118,9 +118,13 @@ class SubscriptionService
         $hospital->update(['status' => 'suspended', 'suspended_reason' => $reason]);
     }
 
+    /** Lift a suspension: back to trial while an unpaid trial is still running, otherwise active. */
     public function activate(Hospital $hospital): void
     {
-        $hospital->update(['status' => 'active', 'suspended_reason' => null]);
+        $onTrial = $hospital->trial_ends_at?->isFuture()
+            && ! SubscriptionInvoice::withoutHospitalScope()->where('hospital_id', $hospital->id)->where('status', 'paid')->exists();
+
+        $hospital->update(['status' => $onTrial ? 'trial' : 'active', 'suspended_reason' => null]);
     }
 
     /**

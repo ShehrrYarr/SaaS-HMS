@@ -56,11 +56,17 @@ class TenantIsolationTest extends TestCase
         $this->get($this->tenantUrl("patients/{$other->id}/card"))->assertNotFound();
     }
 
-    public function test_user_of_one_hospital_is_signed_out_when_opening_another_hospital(): void
+    public function test_user_of_one_hospital_cannot_open_another_hospital(): void
     {
-        $this->actingAsTenantUser('admin@cityhospital.test');
+        $user = $this->actingAsTenantUser('admin@cityhospital.test');
 
-        $this->get($this->tenantUrl('dashboard', 'sunrise-clinic'))->assertRedirect('/h/sunrise-clinic/login');
+        $this->get($this->tenantUrl('dashboard', 'sunrise-clinic'))->assertForbidden()
+            ->assertSee('signed in to City General Hospital')->assertDontSee('Sunrise Clinic Admin');
+        $this->get($this->tenantUrl('login', 'sunrise-clinic'))->assertForbidden();
+        $this->assertAuthenticatedAs($user); // not signed out by surprise
+
+        // "Sign out and continue" logs out and opens the other hospital's sign-in.
+        $this->post($this->tenantUrl('logout', 'sunrise-clinic'))->assertRedirect('/h/sunrise-clinic/login');
         $this->assertGuest();
     }
 

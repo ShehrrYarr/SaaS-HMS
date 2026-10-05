@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Platform-wide clock; matches the hospitals (Asia/Karachi) so Super Admin and hospital records sort together.
+    'timezone' => env('APP_TIMEZONE', 'Asia/Karachi'),
 
     /*
     |--------------------------------------------------------------------------

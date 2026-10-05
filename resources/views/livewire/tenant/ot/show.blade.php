@@ -53,6 +53,11 @@ new #[Layout('layouts.app')] #[Title('Surgery')] class extends Component
         $this->authorize('ot.manage');
         $flow = ['scheduled' => 'pre_op', 'pre_op' => 'in_progress', 'in_progress' => 'post_op', 'post_op' => 'completed'];
         abort_unless(($flow[$this->surgery->status] ?? null) === $status || $status === 'cancelled', 422);
+        if ($status === 'cancelled' && ! in_array($this->surgery->status, ['scheduled', 'pre_op'], true)) {
+            $this->toast('A surgery that has started or finished cannot be cancelled.', 'error');
+
+            return;
+        }
 
         if ($status === 'in_progress' && count(array_filter($this->pre)) < count(Surgery::PRE_OP_CHECKLIST)) {
             $this->toast('Complete the pre-op checklist (WHO sign-in) before starting.', 'error');
@@ -73,8 +78,9 @@ new #[Layout('layouts.app')] #[Title('Surgery')] class extends Component
         $this->surgery->update($attrs);
 
         if ($status === 'completed' && (float) $this->surgery->charges > 0) {
-            $admission = $this->surgery->admission;
-            if ($admission && $admission->status === 'admitted') {
+            // Booked before admission? Bill the stay the patient is in now.
+            $admission = $this->surgery->admission?->status === 'admitted' ? $this->surgery->admission : $this->surgery->patient->currentAdmission;
+            if ($admission) {
                 $ipd->addCharge($admission, ['category' => 'ot', 'description' => 'Surgery: '.$this->surgery->procedure_name, 'unit_price' => $this->surgery->charges, 'source' => $this->surgery, 'doctor_id' => $this->surgery->surgeon_id]);
             } elseif (hospital()->hasModule('billing')) {
                 $billing->createInvoice($this->surgery->patient, [[
@@ -120,7 +126,7 @@ new #[Layout('layouts.app')] #[Title('Surgery')] class extends Component
             @if ($next)
                 <button class="btn btn-sm btn-primary" x-on:click="$confirm('Move to {{ label($next) }}?', () => $wire.advance('{{ $next }}'), { color: 'primary', confirmText: 'Continue' })"><i class="ri-arrow-right-line me-1"></i>{{ label($next) }}</button>
             @endif
-            @if (! in_array($s->status, ['completed', 'cancelled', 'in_progress']))
+            @if (in_array($s->status, ['scheduled', 'pre_op']))
                 <button class="btn btn-sm btn-light-danger" x-on:click="$confirm('Cancel this surgery?', () => $wire.advance('cancelled'))">Cancel</button>
             @endif
         @endcan

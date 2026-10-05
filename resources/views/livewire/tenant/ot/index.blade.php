@@ -82,6 +82,14 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
             return;
         }
 
+        $busy = Surgery::with('room')->where('surgeon_id', $this->form['surgeon_id'])->whereNotIn('status', ['cancelled', 'completed'])
+            ->where('scheduled_start', '<', $this->form['scheduled_end'])->where('scheduled_end', '>', $this->form['scheduled_start'])->first();
+        if ($busy) {
+            $this->addError('form.surgeon_id', "The surgeon is already operating {$busy->scheduled_start->format('H:i')}–{$busy->scheduled_end->format('H:i')} in {$busy->room?->name} ({$busy->surgery_no}).");
+
+            return;
+        }
+
         $surgery = DB::transaction(function () {
             $patient = Patient::with('currentAdmission')->findOrFail($this->form['patient_id']);
             $surgery = Surgery::create(array_map(fn ($v) => $v === '' ? null : $v, $this->form) + [
@@ -180,7 +188,7 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
             <div class="row g-2 mb-2" wire:key="tm-{{ $i }}">
                 <div class="col-md-6"><x-form.search-select class="mb-0" model="team.{{ $i }}.staff_id" :options="$staffOptions" /></div>
                 <div class="col-md-5"><select class="form-select" wire:model="team.{{ $i }}.role">@foreach ($teamRoles as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
-                <div class="col-md-1"><button class="btn btn-light-danger w-100" wire:click="removeTeam({{ $i }})"><i class="ri-close-line"></i></button></div>
+                <div class="col-md-1"><button title="Remove" aria-label="Remove" class="btn btn-light-danger w-100" wire:click="removeTeam({{ $i }})"><i class="ri-close-line"></i></button></div>
             </div>
         @endforeach
         <button class="btn btn-sm btn-light-primary" wire:click="addTeam"><i class="ri-add-line"></i> Team member</button>

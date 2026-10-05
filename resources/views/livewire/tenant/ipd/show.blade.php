@@ -208,7 +208,7 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                 <x-form.input class="col-md-1 mb-0" label="Qty" model="charge.quantity" type="number" step="0.5" />
                                 <x-form.money class="col-md-1 mb-0" label="Price" model="charge.unit_price" />
                                 <x-form.select class="col-md-1 mb-0" label="Doctor" model="charge.doctor_id" :options="$doctors" placeholder="—" />
-                                <div class="col-md-1"><button class="btn btn-primary w-100" wire:click="addCharge"><i class="ri-add-line"></i></button></div>
+                                <div class="col-md-1"><button title="Add" aria-label="Add" class="btn btn-primary w-100" wire:click="addCharge"><i class="ri-add-line"></i></button></div>
                             </div>
                         @endcan
                     @endif
@@ -220,8 +220,8 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
                                 <tr class="table-light"><td>{{ fmt_date($al->from_at) }}</td><td>Bed</td><td>{{ $al->bed->label }} ({{ fmt_date($al->from_at) }} – {{ $al->to_at ? fmt_date($al->to_at) : 'now' }})</td><td class="text-end">{{ $days }}</td><td class="text-end">{{ money($al->charge_per_day) }}</td><td class="text-end">{{ money($days * $al->charge_per_day) }}</td><td></td></tr>
                             @endforeach
                             @forelse ($a->charges->sortByDesc('charged_at') as $c)
-                                <tr><td>{{ fmt_datetime($c->charged_at) }}</td><td>{{ label($c->category) }}</td><td>{{ $c->description }} @if ($c->doctor)<small class="text-muted">· {{ $c->doctor->display_name }}</small>@endif</td><td class="text-end">{{ (float) $c->quantity }}</td><td class="text-end">{{ money($c->unit_price) }}</td><td class="text-end">{{ money($c->amount) }}</td>
-                                    <td class="text-end">@if (! $c->billed && $open)@can('ipd.charges')<button class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove charge?', () => $wire.removeCharge({{ $c->id }}))"><i class="ri-close-line"></i></button>@endcan @endif</td></tr>
+                                <tr><td>{{ fmt_datetime($c->charged_at) }}</td><td>{{ ['ot' => 'Surgery (OT)', 'bloodbank' => 'Blood bank', 'lab' => 'Lab', 'radiology' => 'Radiology'][$c->category] ?? label($c->category) }}</td><td>{{ $c->description }} @if ($c->doctor)<small class="text-muted">· {{ $c->doctor->display_name }}</small>@endif</td><td class="text-end">{{ (float) $c->quantity }}</td><td class="text-end">{{ money($c->unit_price) }}</td><td class="text-end">{{ money($c->amount) }}</td>
+                                    <td class="text-end">@if (! $c->billed && $open)@can('ipd.charges')<button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove charge?', () => $wire.removeCharge({{ $c->id }}))"><i class="ri-close-line"></i></button>@endcan @endif</td></tr>
                             @empty
                                 <tr><td colspan="7" class="text-muted text-center">No additional charges.</td></tr>
                             @endforelse

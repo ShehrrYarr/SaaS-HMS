@@ -65,8 +65,12 @@ class BloodBankService
 
     public function crossmatch(BloodRequest $request, BloodBag $bag, string $result, ?string $notes = null): BloodCrossmatch
     {
+        $this->ensureNotExpired($bag);
         if ($bag->status !== 'available') {
             throw ValidationException::withMessages(['bag' => 'Bag is not available.']);
+        }
+        if ($result === 'compatible' && $bag->component !== $request->component) {
+            throw ValidationException::withMessages(['bag' => "Bag {$bag->bag_no} is ".(BloodBag::COMPONENTS[$bag->component] ?? $bag->component).', but the request is for '.(BloodBag::COMPONENTS[$request->component] ?? $request->component).'.']);
         }
         if (! in_array($bag->blood_group, static::compatibleDonorGroups($request->blood_group, $request->component), true) && $result === 'compatible') {
             throw ValidationException::withMessages(['bag' => "{$bag->blood_group} is not ABO/Rh compatible with {$request->blood_group}."]);
@@ -90,6 +94,7 @@ class BloodBankService
         if ($crossmatch->result !== 'compatible' || $crossmatch->issued_at) {
             throw ValidationException::withMessages(['issue' => 'Only compatible, un-issued units can be issued.']);
         }
+        $this->ensureNotExpired($crossmatch->bag, 'issue');
 
         DB::transaction(function () use ($crossmatch, $charge) {
             $crossmatch->update(['issued_at' => now(), 'issued_by' => auth()->id()]);
@@ -102,13 +107,24 @@ class BloodBankService
 
             if ($charge > 0) {
                 $description = 'Blood unit '.$crossmatch->bag->bag_no.' ('.$crossmatch->bag->blood_group.' '.(BloodBag::COMPONENTS[$crossmatch->bag->component] ?? '').')';
-                if ($request->admission && $request->admission->status === 'admitted') {
-                    $this->ipd->addCharge($request->admission, ['category' => 'bloodbank', 'description' => $description, 'unit_price' => $charge, 'source' => $crossmatch]);
+                // A request raised before admission still belongs on the bill of the stay the unit is given in.
+                $admission = $request->admission?->status === 'admitted' ? $request->admission : $request->patient->currentAdmission;
+                if ($admission) {
+                    $this->ipd->addCharge($admission, ['category' => 'bloodbank', 'description' => $description, 'unit_price' => $charge, 'source' => $crossmatch]);
                 } elseif (hospital()->hasModule('billing')) {
                     $this->billing->createInvoice($request->patient, [['service_type' => 'bloodbank', 'description' => $description, 'unit_price' => $charge, 'source' => $crossmatch]]);
                 }
             }
         });
+    }
+
+    /** The nightly job marks bags expired; until it runs, an out-of-date bag must still never be matched or issued. */
+    protected function ensureNotExpired(BloodBag $bag, string $key = 'bag'): void
+    {
+        if ($bag->expires_at && $bag->expires_at->lt(today())) {
+            $bag->update(['status' => 'expired']);
+            throw ValidationException::withMessages([$key => "Bag {$bag->bag_no} expired on ".fmt_date($bag->expires_at).' and cannot be used.']);
+        }
     }
 
     public function expireOld(): int

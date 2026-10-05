@@ -22,7 +22,8 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
     protected array $sortable = ['created_at'];
 
     #[Url]
-    public string $status = 'pending';
+    /** "open" = still needs work (pending or cross-matched awaiting issue). */
+    public string $status = 'open';
 
     public bool $showForm = false;
 
@@ -108,7 +109,8 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
     public function with(): array
     {
         $query = BloodRequest::with(['patient', 'admission.bed.ward', 'crossmatches.bag', 'requester'])
-            ->when($this->status, fn ($q) => $q->where('status', $this->status))
+            ->when($this->status === 'open', fn ($q) => $q->whereIn('status', ['pending', 'crossmatched']))
+            ->when($this->status && $this->status !== 'open', fn ($q) => $q->where('status', $this->status))
             ->when($this->search, fn ($q) => $q->where(fn ($q) => $q->where('request_no', 'like', "%{$this->search}%")->orWhereHas('patient', fn ($p) => $p->search($this->search))));
 
         $active = $this->activeId ? BloodRequest::find($this->activeId) : null;
@@ -130,7 +132,7 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
     </x-page-header>
     <div class="card">
         <x-table-toolbar placeholder="Request # or patient...">
-            <select class="form-select w-auto" wire:model.live="status"><option value="">All</option>@foreach (['pending', 'crossmatched', 'issued', 'cancelled'] as $s)<option value="{{ $s }}">{{ label($s) }}</option>@endforeach</select>
+            <select class="form-select w-auto" wire:model.live="status"><option value="open">Open (pending + cross-matched)</option><option value="">All</option>@foreach (['pending', 'crossmatched', 'issued', 'cancelled'] as $s)<option value="{{ $s }}">{{ label($s) }}</option>@endforeach</select>
         </x-table-toolbar>
         <div class="table-responsive">
             <table class="table table-hms align-middle mb-0">
@@ -147,7 +149,7 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
                             <td class="text-end text-nowrap">
                                 @if (in_array($r->status, ['pending', 'crossmatched']))
                                     <button class="btn btn-sm btn-primary" wire:click="open({{ $r->id }})">{{ $activeId === $r->id ? 'Close' : 'Process' }}</button>
-                                    @can('bloodbank.manage')<button class="btn btn-sm btn-light-danger" x-on:click="$confirm('Cancel request?', () => $wire.cancel({{ $r->id }}))"><i class="ri-close-line"></i></button>@endcan
+                                    @can('bloodbank.manage')<button title="Cancel request" aria-label="Cancel request" class="btn btn-sm btn-light-danger" x-on:click="$confirm('Cancel request?', () => $wire.cancel({{ $r->id }}))"><i class="ri-close-line"></i></button>@endcan
                                 @endif
                             </td>
                         </tr>

@@ -146,39 +146,65 @@ data. The scheduler runs it every `HMS_DEMO_RESET_HOURS`, and other hospitals ar
 
 ## Deploying to the VPS
 
-Target: `http://23.230.253.206/hms` on Ubuntu + Nginx/Apache + PHP-FPM 8.2+.
+Live at `http://23.230.253.206/hms` — Ubuntu 24.04, Apache 2.4 + PHP-FPM 8.3, MySQL 8, code in `/var/www/SaaS_HMS`.
+
+**First install**
 
 ```bash
-cd /var/www && git clone https://github.com/ShehrrYarr/SaaS-HMS.git hms && cd hms
-composer install --no-dev --optimize-autoloader
+cd /var/www && git clone https://github.com/ShehrrYarr/SaaS-HMS.git SaaS_HMS && cd SaaS_HMS
+git config --global --add safe.directory /var/www/SaaS_HMS
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
 cp .env.example .env && php artisan key:generate
-# .env: APP_ENV=production, APP_DEBUG=false, APP_URL=http://23.230.253.206/hms, DB_*, MAIL_*, HMS_SMS_DRIVER
-php artisan migrate --force
-php artisan db:seed --force          # first install only (demo data) — or seed just plans + super admin
-php artisan config:cache && php artisan route:cache && php artisan view:cache
-sudo chown -R www-data:www-data storage bootstrap/cache
+# .env: APP_ENV=production, APP_DEBUG=false, APP_URL=http://23.230.253.206/hms, LOG_LEVEL=warning,
+#       DB_DATABASE/DB_USERNAME/DB_PASSWORD (own MySQL user), SESSION_PATH=/hms, SESSION_COOKIE=saas_hms_session
+php artisan migrate --seed --force   # --seed: plans, Super Admin and the demo hospitals (first install only)
+php artisan config:cache && php artisan view:cache && php artisan event:cache
+chown -R www-data:www-data /var/www/SaaS_HMS
 ```
 
-**Nginx (sub-path `/hms`)** — a starting point (not yet tested on the VPS); after deploying, check that `/hms/livewire/livewire.js` and `/hms/assets/css/app.min.css` return 200.
+Do **not** run `php artisan route:cache` (or `optimize`): with cached routes the Volt home page (`/`) answers 405.
+`SESSION_PATH` / `SESSION_COOKIE` keep this app's login separate from the other apps on the same IP.
 
-```nginx
-location ^~ /hms {
-    alias /var/www/hms/public;
-    try_files $uri $uri/ @hms;
+**Apache** — `/etc/apache2/conf-available/saas_hms.conf`, enabled with `a2enconf saas_hms && systemctl reload apache2`:
 
-    location ~ \.php$ {
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME /var/www/hms/public/index.php;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-    }
-}
-location @hms { rewrite ^/hms/(.*)$ /hms/index.php?/$1 last; }
-client_max_body_size 110M;
+```apache
+Alias /hms /var/www/SaaS_HMS/public
+
+<Directory /var/www/SaaS_HMS/public>
+    Options -Indexes -MultiViews +FollowSymLinks
+    AllowOverride None
+    Require all granted
+
+    RewriteEngine On
+    RewriteBase /hms/
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteRule ^$ index.php [L]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</Directory>
 ```
 
-**Apache**: use the same `Alias` block as the WAMP example (with `Require all granted`).
+**PHP upload limit** (HMS only, PHP-FPM reads it): `public/.user.ini` with `upload_max_filesize = 64M` and
+`post_max_size = 70M` (kept out of git via `.git/info/exclude`).
 
-**PHP** (`php.ini`): `upload_max_filesize = 100M`, `post_max_size = 110M` (DICOM uploads), `memory_limit = 512M`.
+**Scheduler** — `crontab -u www-data -e`:
+
+```cron
+* * * * * cd /var/www/SaaS_HMS && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**Updating**
+
+```bash
+cd /var/www/SaaS_HMS && git pull && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+php artisan migrate --force && php artisan config:cache && php artisan view:cache && php artisan event:cache
+chown -R www-data:www-data /var/www/SaaS_HMS
+```
 
 The app handles the sub-path itself: Livewire’s script/update endpoints are prefixed with the request base path
 (`App\Support\Livewire\SubdirectoryHandleRequests`), and assets use `asset_v()` (cache-busting `?v=`).
@@ -186,7 +212,7 @@ The app handles the sub-path itself: Livewire’s script/update endpoints are pr
 ## Scheduled jobs & workers
 
 ```cron
-* * * * * cd /var/www/hms && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/SaaS_HMS && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 | Command | When | What |

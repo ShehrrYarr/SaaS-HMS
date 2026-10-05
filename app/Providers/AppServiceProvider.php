@@ -39,8 +39,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if (! $this->app->runningInConsole()) {
-            // Absolute script URL so /hms/livewire/livewire.js resolves under a sub-directory.
-            config(['livewire.asset_url' => url('livewire/livewire.js')]);
+            // Absolute script URL so it resolves under a sub-directory (/hms). Livewire serves
+            // livewire.js when debugging and livewire.min.js in production.
+            config(['livewire.asset_url' => url(config('app.debug') ? 'livewire/livewire.js' : 'livewire/livewire.min.js')]);
         }
 
         Paginator::useBootstrapFive();

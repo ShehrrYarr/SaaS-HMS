@@ -68,7 +68,8 @@ Route::prefix('h/{hospital}')->middleware('tenant')->group(function () {
     Route::name('tenant.')->group(function () {
         Volt::route('login', 'auth.tenant-login')->middleware('guest')->name('login');
         Route::post('logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
-        Route::redirect('/', 'dashboard');
+        // Named-route redirect: a relative "dashboard" would resolve to /h/dashboard in the browser.
+        Route::get('/', fn () => redirect()->route('tenant.dashboard'));
 
         Route::middleware(['auth', 'staff'])->group(function () {
             Volt::route('dashboard', 'tenant.dashboard')->name('dashboard');

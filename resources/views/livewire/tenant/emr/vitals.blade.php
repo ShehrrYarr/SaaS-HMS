@@ -46,7 +46,10 @@ new class extends Component
             'form.blood_sugar' => 'nullable|numeric|between:10,1000',
             'form.pain_score' => 'nullable|integer|between:0,10',
             'form.notes' => 'nullable|string|max:255',
-        ], [], ['form.temperature' => 'temperature (°C)'])['form'];
+        ], [], [
+            'form.temperature' => 'temperature (°C)', 'form.bp_systolic' => 'systolic BP', 'form.bp_diastolic' => 'diastolic BP',
+            'form.spo2' => 'SpO₂', 'form.weight' => 'weight (kg)', 'form.height' => 'height (cm)', 'form.blood_sugar' => 'blood sugar',
+        ])['form'];
 
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         if (count(array_filter($data, fn ($v) => $v !== null)) === 0) {
@@ -116,7 +119,11 @@ new class extends Component
                 </div>
                 <div class="col-md-{{ $compact ? 3 : 2 }}"><button class="btn btn-sm btn-primary w-100"><i class="ri-add-line"></i> Record</button></div>
             </div>
-            @if ($errors->any())<div class="text-danger fs-12 mt-2">{{ $errors->first() }}</div>@endif
+            @if ($errors->any())
+                <ul class="text-danger fs-12 mt-2 mb-0 ps-3">
+                    @foreach ($errors->all() as $message)<li>{{ $message }}</li>@endforeach
+                </ul>
+            @endif
         </form>
     @endif
 
@@ -131,14 +138,14 @@ new class extends Component
                 @forelse ($vitals as $v)
                     <tr wire:key="v-{{ $v->id }}">
                         <td class="text-nowrap">{{ fmt_datetime($v->recorded_at) }}</td>
-                        <td class="{{ $v->bp_systolic >= 140 || $v->bp_diastolic >= 90 ? 'text-danger fw-semibold' : '' }}">{{ $v->bp ?? '—' }}</td>
-                        <td>{{ $v->pulse ?? '—' }}</td>
-                        <td class="{{ $v->temperature >= 38 ? 'text-danger fw-semibold' : '' }}">{{ $v->temperature ?? '—' }}</td>
-                        <td>{{ $v->respiratory_rate ?? '—' }}</td>
-                        <td class="{{ $v->spo2 && $v->spo2 < 94 ? 'text-danger fw-semibold' : '' }}">{{ $v->spo2 ? $v->spo2.'%' : '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('bp')])>{{ $v->bp ?? '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('pulse')])>{{ $v->pulse ?? '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('temperature')])>{{ $v->temperature ?? '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('respiratory_rate')])>{{ $v->respiratory_rate ?? '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('spo2')])>{{ $v->spo2 ? $v->spo2.'%' : '—' }}</td>
                         <td>{{ $v->weight ?? '—' }}</td>
                         <td>{{ $v->bmi ?? '—' }}</td>
-                        <td>{{ $v->blood_sugar ?? '—' }}</td>
+                        <td @class(['text-danger fw-semibold' => $v->abnormal('blood_sugar')])>{{ $v->blood_sugar ?? '—' }}</td>
                         <td class="fs-12 text-muted">{{ $v->recorder?->name }}</td>
                     </tr>
                 @empty

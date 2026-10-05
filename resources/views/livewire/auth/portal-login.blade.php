@@ -69,7 +69,8 @@ new #[Layout('layouts.guest')] #[Title('Patient Portal')] class extends Componen
         RateLimiter::hit($key, 300);
 
         $value = trim($this->identifier);
-        $patient = Patient::whereNotNull('user_id')->where(fn ($q) => $q->where('uhid', $value)->orWhere('phone', $value))->first();
+        $phone = normalize_phone($value);
+        $patient = Patient::whereNotNull('user_id')->where(fn ($q) => $q->where('uhid', $value)->orWhere('phone', $phone))->first();
         $user = $patient?->user;
 
         if (! $patient || ! $user || ! $user->isActive() || ! $patient->phone) {

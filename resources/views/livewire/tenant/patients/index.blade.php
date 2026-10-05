@@ -34,19 +34,46 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
 
     public ?int $opdDoctor = null;
 
+    /** Existing patients that look like the person being registered (shown before a second UHID is made). */
+    public array $duplicates = [];
+
     public function openQuick(): void
     {
         $this->authorize('patients.create');
         $this->quick = ['first_name' => '', 'last_name' => '', 'gender' => 'male', 'age' => '', 'phone' => '', 'chief_complaint' => ''];
         $this->createdId = null;
         $this->opdDoctor = null;
+        $this->duplicates = [];
         $this->resetValidation();
         $this->showQuick = true;
     }
 
-    public function saveQuick(OpdService $opd): void
+    public function updatedQuick(): void
+    {
+        $this->duplicates = [];
+    }
+
+    /** Same phone number (last 10 digits, so 0300… and +92300… match) or same name and gender. */
+    protected function findDuplicates(array $data): array
+    {
+        $digits = substr(preg_replace('/\D/', '', (string) $data['phone']), -10);
+
+        return Patient::query()
+            ->where(function ($q) use ($data, $digits) {
+                $q->where(fn ($q) => $q->where('first_name', $data['first_name'])->where('last_name', $data['last_name'] ?: null)->where('gender', $data['gender']));
+                if (strlen($digits) >= 7) {
+                    $q->orWhereRaw("REPLACE(REPLACE(phone, ' ', ''), '-', '') LIKE ?", ["%{$digits}"]);
+                }
+            })
+            ->limit(5)->get()
+            ->map(fn (Patient $p) => ['id' => $p->id, 'uhid' => $p->uhid, 'name' => $p->full_name, 'phone' => $p->phone])
+            ->all();
+    }
+
+    public function saveQuick(bool $confirmed = false): void
     {
         $this->authorize('patients.create');
+        $opd = app(OpdService::class);
         $data = $this->validate([
             'quick.first_name' => 'required|string|max:80',
             'quick.last_name' => 'nullable|string|max:80',
@@ -56,6 +83,10 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
             'quick.chief_complaint' => 'nullable|string|max:200',
             'opdDoctor' => 'nullable|integer',
         ], [], ['quick.first_name' => 'first name', 'quick.age' => 'age'])['quick'];
+
+        if (! $confirmed && $this->duplicates = $this->findDuplicates($data)) {
+            return;
+        }
 
         $patient = Patient::create([
             'uhid' => Patient::generateUhid(),
@@ -178,6 +209,17 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
 
     <x-modal wire:model="showQuick" title="Quick registration" size="lg">
         <p class="text-muted fs-13">Minimal details for walk-ins and emergencies. A UHID is generated instantly; complete the profile later.</p>
+        @if ($duplicates)
+            <div class="alert alert-warning py-2 fs-13">
+                <strong>This patient may already be registered:</strong>
+                <ul class="mb-2 ps-3">
+                    @foreach ($duplicates as $d)
+                        <li><a href="{{ route('tenant.patients.show', $d['id']) }}" wire:navigate>{{ $d['name'] }}</a> · {{ $d['uhid'] }}@if ($d['phone']) · {{ $d['phone'] }}@endif</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn btn-sm btn-warning" wire:click="saveQuick(true)" wire:loading.attr="disabled">Register as a new patient anyway</button>
+            </div>
+        @endif
         <div class="row">
             <x-form.input class="col-md-6" label="First name" model="quick.first_name" required />
             <x-form.input class="col-md-6" label="Last name" model="quick.last_name" />

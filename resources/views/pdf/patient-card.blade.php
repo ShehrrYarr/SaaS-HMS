@@ -6,7 +6,7 @@
         <tr><td colspan="2" style="background: #0d6efd; color: #fff; padding: 3px 6px;"><b>{{ $hospital->name }}</b> <span style="float: right;">PATIENT CARD</span></td></tr>
         <tr>
             <td style="width: 32%; padding: 4px; text-align: center;">
-                @if ($photo)<img src="{{ $photo }}" style="width: 52px; height: 60px;">@else<div style="width: 52px; height: 52px; background: #e5e7eb; line-height: 52px; font-size: 18px; margin: auto;">{{ $patient->initials() }}</div>@endif
+                @if ($photo)<img src="{{ $photo }}" style="width: 52px; height: 60px;">@else<table style="width: 52px; height: 52px; margin: auto; background: #e5e7eb;"><tr><td style="height: 52px; padding: 0; text-align: center; vertical-align: middle; font-size: 18px;">{{ $patient->initials() }}</td></tr></table>@endif
             </td>
             <td style="padding: 4px;">
                 <b style="font-size: 10px;">{{ $patient->full_name }}</b><br>

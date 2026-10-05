@@ -128,14 +128,20 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
         $patient->update(['user_id' => $user->id]);
     }
 
+    public function rendering($view): void
+    {
+        $view->title($this->patient ? 'Edit Patient' : 'Patient Registration');
+    }
+
     public function with(): array
     {
-        $phone = trim((string) ($this->form['phone'] ?? ''));
+        // Compare the last 10 digits so "0300 2000001" and "+923002000001" count as the same number.
+        $digits = substr(preg_replace('/\D/', '', (string) ($this->form['phone'] ?? '')), -10);
 
         return [
             'tpas' => Tpa::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'duplicates' => strlen($phone) >= 6
-                ? Patient::where('phone', 'like', "%{$phone}%")->when($this->patient, fn ($q) => $q->whereKeyNot($this->patient->id))->limit(5)->get()
+            'duplicates' => strlen($digits) >= 7
+                ? Patient::whereRaw("REPLACE(REPLACE(phone, ' ', ''), '-', '') LIKE ?", ["%{$digits}"])->when($this->patient, fn ($q) => $q->whereKeyNot($this->patient->id))->limit(5)->get()
                 : collect(),
         ];
     }

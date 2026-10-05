@@ -24,12 +24,14 @@ new class extends Component
         $this->patient->allergies()->create($data + ['noted_at' => today(), 'recorded_by' => auth()->id()]);
         $this->form = ['allergen' => '', 'type' => 'drug', 'reaction' => '', 'severity' => 'moderate'];
         $this->toast('Allergy recorded.');
+        $this->dispatch('emr-updated');
     }
 
     public function delete(int $id): void
     {
         $this->authorize('emr.manage');
         $this->patient->allergies()->findOrFail($id)->delete();
+        $this->dispatch('emr-updated');
     }
 
     public function with(): array

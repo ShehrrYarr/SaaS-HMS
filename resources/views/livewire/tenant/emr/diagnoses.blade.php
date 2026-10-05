@@ -58,12 +58,14 @@ new class extends Component
 
         $this->reset('icd', 'description');
         $this->toast('Diagnosis added.');
+        $this->dispatch('emr-updated');
     }
 
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->canAny(['emr.manage', 'opd.consult']), 403);
         $this->patient->diagnoses()->findOrFail($id)->delete();
+        $this->dispatch('emr-updated');
     }
 
     public function with(): array

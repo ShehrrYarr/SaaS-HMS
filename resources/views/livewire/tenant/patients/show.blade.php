@@ -2,6 +2,7 @@
 
 use App\Models\Patient;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -17,6 +18,11 @@ new #[Layout('layouts.app')] #[Title('Patient EMR')] class extends Component
     {
         $this->patient = $patient;
     }
+
+    /** A tab (vitals, allergies, diagnoses) changed what the header and overview show: re-render them. */
+    #[On('vitals-saved')]
+    #[On('emr-updated')]
+    public function refreshPatient(): void {}
 
     public function with(): array
     {

@@ -53,4 +53,19 @@ class Vital extends Model
     {
         return $this->bp_systolic ? $this->bp_systolic.'/'.$this->bp_diastolic : null;
     }
+
+    /** Outside the usual adult range, high or low (highlighted in the EMR). */
+    public function abnormal(string $field): bool
+    {
+        return match ($field) {
+            'bp' => (bool) $this->bp_systolic && ($this->bp_systolic >= 140 || $this->bp_systolic < 90
+                || $this->bp_diastolic >= 90 || ($this->bp_diastolic && $this->bp_diastolic < 60)),
+            'pulse' => (bool) $this->pulse && ($this->pulse > 100 || $this->pulse < 50),
+            'temperature' => (bool) $this->temperature && ($this->temperature >= 38 || $this->temperature < 35),
+            'respiratory_rate' => (bool) $this->respiratory_rate && ($this->respiratory_rate > 20 || $this->respiratory_rate < 12),
+            'spo2' => (bool) $this->spo2 && $this->spo2 < 94,
+            'blood_sugar' => (bool) $this->blood_sugar && ($this->blood_sugar >= 200 || $this->blood_sugar < 70),
+            default => false,
+        };
+    }
 }

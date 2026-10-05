@@ -24,6 +24,12 @@ class Patient extends Model
         ];
     }
 
+    /** Stored in one format so the portal's phone sign-in and duplicate checks find it. */
+    protected function phone(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(set: fn ($value) => normalize_phone($value));
+    }
+
     public function tpa(): BelongsTo
     {
         return $this->belongsTo(Tpa::class);
@@ -166,11 +172,15 @@ class Patient extends Model
             return $query;
         }
 
-        return $query->where(function ($q) use ($term) {
+        $digits = preg_replace('/\D/', '', $term);
+
+        return $query->where(function ($q) use ($term, $digits) {
             $q->where('uhid', 'like', "%{$term}%")
                 ->orWhere('first_name', 'like', "%{$term}%")
                 ->orWhere('last_name', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")
+                // "0321 5554433" finds +923215554433: match on the digits after the leading 0 / +92.
+                ->when(strlen($digits) >= 7, fn ($q) => $q->orWhere('phone', 'like', '%'.substr(ltrim($digits, '0'), -10).'%'))
                 ->orWhere('national_id', 'like', "%{$term}%")
                 ->orWhereRaw("CONCAT(first_name, ' ', COALESCE(last_name, '')) like ?", ["%{$term}%"]);
         });

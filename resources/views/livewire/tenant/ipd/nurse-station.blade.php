@@ -44,6 +44,9 @@ new #[Layout('layouts.app')] #[Title('Nurse Station')] class extends Component
                     if ($v->temperature && $v->temperature >= 38) $alerts[] = 'Fever '.$v->temperature.'°C';
                     if ($v->bp_systolic && ($v->bp_systolic >= 160 || $v->bp_systolic < 90)) $alerts[] = 'BP '.$v->bp;
                     if ($v->pulse && ($v->pulse > 120 || $v->pulse < 50)) $alerts[] = 'Pulse '.$v->pulse;
+                    if ($v->temperature && $v->temperature < 35) $alerts[] = 'Low temp '.$v->temperature.'°C';
+                    if ($v->respiratory_rate && ($v->respiratory_rate > 24 || $v->respiratory_rate < 10)) $alerts[] = 'RR '.$v->respiratory_rate;
+                    if ($v->blood_sugar && ($v->blood_sugar < 70 || $v->blood_sugar > 300)) $alerts[] = 'Sugar '.$v->blood_sugar.' mg/dL';
                 }
                 $a->setAttribute('vital_alerts', $alerts);
                 $a->setAttribute('vitals_due', ! $v || $v->recorded_at->lt(now()->subHours(4)));

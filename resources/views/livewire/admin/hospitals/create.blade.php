@@ -24,10 +24,18 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
 
     public bool $trial = true;
 
+    /** One login per default role (HospitalProvisioner::STARTER_ROLES, in order); rows left blank are skipped. */
+    public bool $starterAccounts = true;
+
+    public array $accounts = [];
+
     public function mount(): void
     {
         $this->plan_id = Plan::where('is_active', true)->orderBy('sort_order')->value('id');
         $this->admin['password'] = Str::password(12, symbols: false);
+        foreach (array_keys(HospitalProvisioner::STARTER_ROLES) as $i => $role) {
+            $this->accounts[$i] = ['name' => '', 'email' => '', 'password' => Str::password(12, symbols: false)];
+        }
     }
 
     public function updatedHospitalName(string $value): void
@@ -58,7 +66,24 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
             'admin.password' => 'required|string|min:8',
             'plan_id' => 'required|exists:plans,id',
             'cycle' => 'required|in:monthly,yearly',
+        ] + ($this->starterAccounts ? [
+            'accounts' => 'array:'.implode(',', array_keys(array_keys(HospitalProvisioner::STARTER_ROLES))),
+            'accounts.*.name' => 'nullable|string|max:120|required_with:accounts.*.email',
+            'accounts.*.email' => ['nullable', 'email', 'max:150', 'required_with:accounts.*.name', 'distinct:ignore_case',
+                fn ($attribute, $value, $fail) => strcasecmp((string) $value, $this->admin['email']) === 0 ? $fail('This is the Hospital Admin\'s email.') : null],
+            'accounts.*.password' => 'nullable|string|min:8|required_with:accounts.*.email',
+        ] : []), [
+            'accounts.*.name.required_with' => 'Enter a name for this login.',
+            'accounts.*.email.required_with' => 'Enter an email for this login, or clear the name to skip it.',
+            'accounts.*.email.distinct' => 'This email is used twice.',
+            'accounts.*.password.required_with' => 'Enter a password.',
         ]);
+
+        $roles = array_keys(HospitalProvisioner::STARTER_ROLES);
+        $accounts = collect($this->starterAccounts ? $data['accounts'] : [])
+            ->filter(fn ($a) => filled($a['email'] ?? null))
+            ->map(fn ($a, $i) => ['role' => $roles[$i], 'name' => $a['name'], 'email' => $a['email'], 'password' => $a['password']])
+            ->values()->all();
 
         $hospitalData = array_filter($data['hospital'], fn ($v) => $v !== '' && $v !== null);
         $hospitalData['code'] = $hospitalData['code'] ?? null;
@@ -66,9 +91,10 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
             unset($hospitalData['code']);
         }
 
-        $hospital = $provisioner->create($hospitalData, $data['admin'], Plan::findOrFail($this->plan_id), $this->cycle, $this->trial);
+        $hospital = $provisioner->create($hospitalData, $data['admin'], Plan::findOrFail($this->plan_id), $this->cycle, $this->trial, $accounts);
 
-        session()->flash('success', "{$hospital->name} created. Admin login: {$data['admin']['email']}");
+        $extra = $accounts ? ' and '.count($accounts).' role '.Str::plural('login', count($accounts)) : '';
+        session()->flash('success', "{$hospital->name} created. Admin login: {$data['admin']['email']}{$extra}.");
 
         return $this->redirect(route('admin.hospitals.show', $hospital), navigate: true);
     }
@@ -113,6 +139,25 @@ new #[Layout('layouts.admin')] #[Title('New Hospital')] class extends Component
                         <x-form.input class="col-md-6" label="Phone" model="admin.phone" />
                         <x-form.input class="col-md-6" label="Initial password" model="admin.password" required hint="Share securely; the admin should change it after first login." />
                     </div>
+                </div>
+                <div class="card mb-0 mt-4">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h5 class="card-title mb-0">Starter accounts</h5>
+                        <x-form.switch class="mb-0" label="Create a login for each role" model="starterAccounts" live />
+                    </div>
+                    @if ($starterAccounts)
+                        <div class="card-body">
+                            <p class="text-muted fs-13">One login per default role, like the demo hospital. Staff roles also get an HR staff record (the doctor in General Medicine). Leave a row blank to skip that role.</p>
+                            @foreach (array_keys(\App\Services\HospitalProvisioner::STARTER_ROLES) as $i => $role)
+                                <div class="row g-2 align-items-start {{ $loop->last ? '' : 'border-bottom mb-3' }}" wire:key="starter-{{ $i }}">
+                                    <div class="col-md-3 pt-md-2 mb-2 mb-md-0 fw-semibold">{{ $role }}</div>
+                                    <x-form.input class="col-md-3" model="accounts.{{ $i }}.name" placeholder="Full name" aria-label="{{ $role }} full name" />
+                                    <x-form.input class="col-md-3" model="accounts.{{ $i }}.email" type="email" placeholder="Email (login)" aria-label="{{ $role }} email" />
+                                    <x-form.input class="col-md-3" model="accounts.{{ $i }}.password" placeholder="Password" aria-label="{{ $role }} password" />
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
             <div class="col-xl-4">

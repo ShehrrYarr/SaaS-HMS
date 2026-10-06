@@ -18,13 +18,31 @@ use Spatie\Permission\Models\Role;
 
 /**
  * Creates a fully usable hospital (tenant): default roles + permissions,
- * the Hospital Admin account, starter departments and the subscription.
+ * the Hospital Admin account, optional starter accounts for the other roles,
+ * starter departments and the subscription.
  */
 class HospitalProvisioner
 {
-    public function create(array $hospitalData, array $admin, Plan $plan, string $cycle = 'monthly', bool $trial = true): Hospital
+    /**
+     * Roles the Super Admin can create a starter account for, with the HR staff record each one gets:
+     * [staff type, designation, department]. FBR Officer is an outside (tax authority) login, so no staff record.
+     */
+    public const STARTER_ROLES = [
+        'Doctor' => ['doctor', 'Medical Officer', 'General Medicine'],
+        'Nurse' => ['nurse', 'Staff Nurse', null],
+        'Receptionist' => ['receptionist', 'Front Desk Officer', null],
+        'Pharmacist' => ['pharmacist', 'Pharmacist', 'Pharmacy'],
+        'Lab Technician' => ['lab_technician', 'Lab Technologist', 'Pathology'],
+        'Radiologist' => ['radiologist', 'Radiologist', 'Radiology'],
+        'Accountant' => ['accountant', 'Accountant', null],
+        'HR Manager' => ['hr', 'HR Manager', null],
+        'FBR Officer' => null,
+    ];
+
+    /** @param  array<int, array{role: string, name: string, email: string, password: string}>  $accounts  starter accounts (STARTER_ROLES) */
+    public function create(array $hospitalData, array $admin, Plan $plan, string $cycle = 'monthly', bool $trial = true, array $accounts = []): Hospital
     {
-        return DB::transaction(function () use ($hospitalData, $admin, $plan, $cycle, $trial) {
+        return DB::transaction(function () use ($hospitalData, $admin, $plan, $cycle, $trial, $accounts) {
             Permissions::sync();
 
             $code = strtoupper($hospitalData['code'] ?? Str::upper(Str::substr(preg_replace('/[^A-Za-z]/', '', $hospitalData['name']), 0, 3)));
@@ -38,36 +56,20 @@ class HospitalProvisioner
                 'subscription_ends_at' => $trial ? now()->addDays($plan->trial_days)->toDateString() : ($cycle === 'yearly' ? now()->addYear() : now()->addMonth())->toDateString(),
             ], collect($hospitalData)->except(['slug', 'code'])->all()));
 
-            tenancy()->run($hospital, function (Hospital $hospital) use ($admin, $plan, $cycle, $trial) {
+            tenancy()->run($hospital, function (Hospital $hospital) use ($admin, $plan, $cycle, $trial, $accounts) {
                 $this->createDefaultRoles($hospital);
-
-                $user = new User([
-                    'name' => $admin['name'],
-                    'email' => $admin['email'],
-                    'phone' => $admin['phone'] ?? null,
-                    'password' => $admin['password'],
-                ]);
-                $user->hospital_id = $hospital->id;
-                $user->email_verified_at = now();
-                $user->save();
-                $user->assignRole('Hospital Admin');
-
-                Staff::create([
-                    'user_id' => $user->id,
-                    'employee_code' => Sequence::code('employee', 'EMP', 4),
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'staff_type' => 'admin',
-                    'designation' => 'Hospital Administrator',
-                    'joining_date' => now()->toDateString(),
-                ]);
 
                 foreach (['General Medicine', 'Pediatrics', 'Gynecology', 'Orthopedics', 'Cardiology', 'Surgery', 'Emergency'] as $name) {
                     Department::create(['name' => $name, 'code' => strtoupper(substr($name, 0, 4)), 'type' => 'clinical']);
                 }
                 foreach (['Pathology', 'Radiology', 'Pharmacy'] as $name) {
                     Department::create(['name' => $name, 'code' => strtoupper(substr($name, 0, 4)), 'type' => 'diagnostic']);
+                }
+
+                $this->createAccount($admin, 'Hospital Admin', ['admin', 'Hospital Administrator', null]);
+                foreach ($accounts as $account) {
+                    abort_unless(array_key_exists($account['role'], self::STARTER_ROLES), 422, "No starter account for the {$account['role']} role.");
+                    $this->createAccount($account, $account['role'], self::STARTER_ROLES[$account['role']]);
                 }
                 foreach (['Salaries', 'Utilities', 'Rent', 'Maintenance', 'Medical Supplies', 'Miscellaneous'] as $name) {
                     ExpenseCategory::create(['name' => $name]);
@@ -86,6 +88,43 @@ class HospitalProvisioner
 
             return $hospital;
         });
+    }
+
+    /**
+     * A login with one role in the current hospital, plus its HR staff record when $staff ([type, designation, department]) is given.
+     *
+     * @param  array{name: string, email: string, phone?: ?string, password: string}  $data
+     */
+    protected function createAccount(array $data, string $role, ?array $staff): User
+    {
+        $user = new User([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'password' => $data['password'],
+        ]);
+        $user->hospital_id = tenancy()->id();
+        $user->email_verified_at = now();
+        $user->save();
+        $user->assignRole($role);
+
+        if ($staff) {
+            [$type, $designation, $department] = $staff;
+            Staff::create([
+                'user_id' => $user->id,
+                'employee_code' => Sequence::code('employee', 'EMP', 4),
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'staff_type' => $type,
+                'designation' => $designation,
+                'department_id' => $department ? Department::where('name', $department)->value('id') : null,
+                'specialization' => $type === 'doctor' ? $department : null,
+                'joining_date' => now()->toDateString(),
+            ]);
+        }
+
+        return $user;
     }
 
     /** Create (or top up) the default roles for a hospital. */

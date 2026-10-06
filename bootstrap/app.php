@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureFbrOfficer;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePatient;
 use App\Http\Middleware\EnsureStaff;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => IdentifyHospital::class,
             'staff' => EnsureStaff::class,
             'patient' => EnsurePatient::class,
+            'fbr' => EnsureFbrOfficer::class,
             'super_admin' => EnsureSuperAdmin::class,
             'module' => EnsureModuleEnabled::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -41,7 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('admin.login');
             }
             if ($request->is('h/*') && tenancy()->check()) {
-                return $request->is('h/*/portal', 'h/*/portal/*') ? route('portal.login') : route('tenant.login');
+                return match (true) {
+                    $request->is('h/*/portal', 'h/*/portal/*') => route('portal.login'),
+                    $request->is('h/*/fbr', 'h/*/fbr/*') => route('fbr.login'),
+                    default => route('tenant.login'),
+                };
             }
 
             return route('home');

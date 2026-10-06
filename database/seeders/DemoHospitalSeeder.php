@@ -255,6 +255,7 @@ class DemoHospitalSeeder extends Seeder
                 'first_name' => fake()->firstName($gender), 'last_name' => fake()->lastName(), 'gender' => $gender,
                 'date_of_birth' => now()->subYears(random_int(2, 80))->subDays(random_int(0, 360))->toDateString(),
                 'blood_group' => $groups[array_rand($groups)], 'phone' => '+92300'.str_pad((string) (2000000 + $i), 7, '0', STR_PAD_LEFT),
+                'cnic' => $i % 6 ? '35202-'.str_pad((string) (1000000 + $i * 7919), 7, '0', STR_PAD_LEFT).'-'.($gender === 'male' ? 1 : 2) : null,
                 'email' => null, 'address' => fake()->streetAddress(), 'city' => 'Lahore', 'country' => 'Pakistan',
                 'emergency_contact_name' => fake()->name(), 'emergency_contact_phone' => fake()->numerify('+92 33# #######'), 'emergency_contact_relation' => 'Spouse',
                 'tpa_id' => $i % 4 === 0 ? $tpa->id : null, 'insurance_policy_no' => $i % 4 === 0 ? 'POL-'.random_int(100000, 999999) : null,
@@ -272,6 +273,12 @@ class DemoHospitalSeeder extends Seeder
         $portalPatient->update(['user_id' => $portalUser->id, 'email' => 'patient@cityhospital.test']);
         $portalPatient->allergies()->create(['allergen' => 'Penicillin', 'type' => 'drug', 'reaction' => 'Skin rash', 'severity' => 'moderate']);
         $portalPatient->histories()->create(['type' => 'past_illness', 'title' => 'Hypertension', 'details' => 'On amlodipine since 2022']);
+
+        // Read-only FBR (tax authority) login
+        $fbrUser = new User(['name' => 'FBR Inspector', 'email' => 'fbr@cityhospital.test', 'password' => 'password']);
+        $fbrUser->hospital_id = $hospital->id;
+        $fbrUser->save();
+        $fbrUser->assignRole('FBR Officer');
 
         // Today's appointments
         foreach ($patients->slice(1, 8)->values() as $i => $patient) {

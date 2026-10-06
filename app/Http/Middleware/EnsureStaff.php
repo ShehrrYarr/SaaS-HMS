@@ -21,6 +21,10 @@ class EnsureStaff
             return redirect()->route('portal.dashboard');
         }
 
+        if ($user->isFbrOfficer()) {
+            return redirect()->route('fbr.dashboard');
+        }
+
         return $next($request);
     }
 }

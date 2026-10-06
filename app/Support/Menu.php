@@ -15,6 +15,7 @@ class Menu
         $sections = match ($area) {
             'admin' => static::admin(),
             'portal' => static::portal(),
+            'fbr' => static::fbr(),
             default => static::tenant(),
         };
 
@@ -107,6 +108,7 @@ class Menu
                     ['label' => 'Departments', 'route' => 'tenant.settings.departments', 'can' => ['departments.manage']],
                     ['label' => 'Insurance Companies', 'route' => 'tenant.settings.tpas', 'can' => ['insurance.manage', 'settings.manage']],
                     ['label' => 'Subscription', 'route' => 'tenant.subscription', 'can' => ['subscription.manage']],
+                    ['label' => 'FBR Access', 'route' => 'tenant.settings.fbr', 'can' => ['users.manage']],
                     ['label' => 'Audit Logs', 'route' => 'tenant.settings.audit', 'can' => ['audit.view']],
                 ]],
             ]],
@@ -141,6 +143,15 @@ class Menu
                 ['label' => 'Medical History', 'icon' => 'ri-heart-pulse-line', 'route' => 'portal.history'],
                 ['label' => 'Bills & Payments', 'icon' => 'ri-bill-line', 'route' => 'portal.bills', 'module' => 'billing'],
                 ['label' => 'My Profile', 'icon' => 'ri-user-settings-line', 'route' => 'portal.profile'],
+            ]],
+        ];
+    }
+
+    protected static function fbr(): array
+    {
+        return [
+            ['title' => 'FBR', 'items' => [
+                ['label' => 'Patient Visits', 'icon' => 'ri-file-list-3-line', 'route' => 'fbr.dashboard'],
             ]],
         ];
     }

@@ -60,11 +60,12 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
             'form.phone' => 'nullable|string|max:30',
             'form.password' => [$this->editingId ? 'nullable' : 'required', 'nullable', 'min:8'],
             'form.roles' => 'required|array|min:1',
-            'form.roles.*' => Rule::exists('roles', 'name')->where('hospital_id', $hid),
+            // FBR accounts are managed on Settings → FBR Access and never share a login with staff.
+            'form.roles.*' => [Rule::exists('roles', 'name')->where('hospital_id', $hid), Rule::notIn(['FBR Officer'])],
             'form.status' => 'required|in:active,inactive',
         ]);
 
-        $user = $this->editingId ? User::forCurrentHospital()->findOrFail($this->editingId) : new User;
+        $user = $this->editingId ? User::forCurrentHospital()->whereDoesntHave('roles', fn ($r) => $r->where('name', 'FBR Officer'))->findOrFail($this->editingId) : new User;
         if ($user->exists && $user->isDemoAccount() && $this->demoLocked('Editing the shared demo accounts')) {
             return;
         }
@@ -93,6 +94,7 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
     public function with(): array
     {
         $query = User::forCurrentHospital()->with(['roles', 'staff'])
+            ->whereDoesntHave('roles', fn ($r) => $r->where('name', 'FBR Officer'))
             ->when(! $this->patients, fn ($q) => $q->whereDoesntHave('roles', fn ($r) => $r->where('name', 'Patient')))
             ->when($this->patients, fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', 'Patient')))
             ->when($this->role, fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $this->role)))
@@ -100,7 +102,7 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
 
         return [
             'users' => $this->applySort($query)->paginate($this->perPage),
-            'roles' => Role::where('hospital_id', hospital()->id)->orderBy('name')->pluck('name'),
+            'roles' => Role::where('hospital_id', hospital()->id)->where('name', '!=', 'FBR Officer')->orderBy('name')->pluck('name'),
         ];
     }
 }; ?>

@@ -1,6 +1,6 @@
 @php
     $user = auth()->user();
-    $logoutRoute = match ($area) { 'admin' => 'admin.logout', 'portal' => 'portal.logout', default => 'tenant.logout' };
+    $logoutRoute = match ($area) { 'admin' => 'admin.logout', 'portal' => 'portal.logout', 'fbr' => 'fbr.logout', default => 'tenant.logout' };
 @endphp
 <!-- START HEADER -->
 <header class="app-header">
@@ -29,7 +29,7 @@
 
                 @if ($area === 'tenant' && $user?->can('patients.view'))
                     <livewire:tenant.global-search />
-                @elseif ($area === 'tenant' || $area === 'portal')
+                @elseif (in_array($area, ['tenant', 'portal', 'fbr']))
                     <span class="fw-semibold d-none d-md-inline">{{ hospital()?->name }}</span>
                 @else
                     <span class="badge bg-primary-subtle text-primary fs-12 d-none d-md-inline">Super Admin Console</span>
@@ -57,9 +57,9 @@
                         </div>
                     </div>
 
-                    @auth
+                    @if (auth()->check() && $area !== 'fbr')
                         <livewire:notification-bell />
-                    @endauth
+                    @endif
 
                     <button type="button" id="fullscreen-button" class="btn icon-btn btn-text-primary rounded-circle custom-toggle d-none d-sm-block" aria-pressed="false">
                         <span class="visually-hidden">Toggle Fullscreen</span>
@@ -93,10 +93,12 @@
                                 @endcan
                             @elseif ($area === 'portal')
                                 <a class="dropdown-item" href="{{ route('portal.profile') }}" wire:navigate><i class="ri-user-line me-2"></i>My Profile</a>
-                            @else
+                            @elseif ($area === 'admin')
                                 <a class="dropdown-item" href="{{ route('admin.settings') }}" wire:navigate><i class="ri-settings-3-line me-2"></i>Global Settings</a>
                             @endif
-                            <div class="dropdown-divider"></div>
+                            @if ($area !== 'fbr')
+                                <div class="dropdown-divider"></div>
+                            @endif
                             <form method="POST" action="{{ route($logoutRoute) }}">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger"><i class="ri-logout-box-r-line me-2"></i>Sign out</button>

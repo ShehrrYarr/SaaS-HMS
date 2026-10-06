@@ -11,6 +11,7 @@ class AuthController extends Controller
     {
         $hospital = hospital();
         $isPatient = $request->user()?->isPatientOnly();
+        $isFbr = $request->user()?->isFbrOfficer();
         $wasSuperAdmin = $request->user()?->is_super_admin;
 
         Auth::logout();
@@ -18,7 +19,9 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         if ($hospital) {
-            return redirect()->route($isPatient ? 'portal.login' : 'tenant.login', ['hospital' => $hospital->slug]);
+            $login = $isFbr ? 'fbr.login' : ($isPatient ? 'portal.login' : 'tenant.login');
+
+            return redirect()->route($login, ['hospital' => $hospital->slug]);
         }
 
         return redirect()->route($wasSuperAdmin ? 'admin.login' : 'home');

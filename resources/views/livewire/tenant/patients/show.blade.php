@@ -98,7 +98,10 @@ new #[Layout('layouts.app')] #[Title('Patient EMR')] class extends Component
                 <ul class="list-group list-group-flush fs-13">
                     <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Phone</span><span>{{ $p->phone ?: '—' }}</span></li>
                     <li class="list-group-item d-flex justify-content-between"><span class="text-muted">DOB</span><span>{{ fmt_date($p->date_of_birth) }}</span></li>
-                    <li class="list-group-item d-flex justify-content-between"><span class="text-muted">National ID</span><span>{{ $p->national_id ?: '—' }}</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-muted">CNIC</span><span>{{ $p->cnic ?: '—' }}</span></li>
+                    @if ($p->national_id)
+                        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Passport / other ID</span><span>{{ $p->national_id }}</span></li>
+                    @endif
                     <li class="list-group-item"><span class="text-muted d-block">Address</span>{{ collect([$p->address, $p->city, $p->country])->filter()->join(', ') ?: '—' }}</li>
                     <li class="list-group-item"><span class="text-muted d-block">Emergency</span>{{ $p->emergency_contact_name ?: '—' }} {{ $p->emergency_contact_phone }} {{ $p->emergency_contact_relation ? '('.$p->emergency_contact_relation.')' : '' }}</li>
                 </ul>

@@ -30,6 +30,24 @@ class Patient extends Model
         return \Illuminate\Database\Eloquent\Casts\Attribute::make(set: fn ($value) => normalize_phone($value));
     }
 
+    /** Pakistani CNIC, typed with or without dashes. */
+    public const CNIC_RULE = 'regex:/^\d{5}-?\d{7}-?\d$/';
+
+    public const CNIC_MESSAGE = 'Enter the CNIC as 13 digits, e.g. 35202-1234567-1.';
+
+    /** Stored as 35202-1234567-1 so searches and the duplicate check match however it was typed. */
+    protected function cnic(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(set: fn ($value) => static::formatCnic($value));
+    }
+
+    public static function formatCnic(?string $value): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $value);
+
+        return strlen($digits) === 13 ? substr($digits, 0, 5).'-'.substr($digits, 5, 7).'-'.substr($digits, 12) : (trim((string) $value) ?: null);
+    }
+
     public function tpa(): BelongsTo
     {
         return $this->belongsTo(Tpa::class);
@@ -182,6 +200,8 @@ class Patient extends Model
                 // "0321 5554433" finds +923215554433: match on the digits after the leading 0 / +92.
                 ->when(strlen($digits) >= 7, fn ($q) => $q->orWhere('phone', 'like', '%'.substr(ltrim($digits, '0'), -10).'%'))
                 ->orWhere('national_id', 'like', "%{$term}%")
+                ->when(strlen($digits) === 13, fn ($q) => $q->orWhere('cnic', static::formatCnic($digits)))
+                ->orWhere('cnic', 'like', "%{$term}%")
                 ->orWhereRaw("CONCAT(first_name, ' ', COALESCE(last_name, '')) like ?", ["%{$term}%"]);
         });
     }

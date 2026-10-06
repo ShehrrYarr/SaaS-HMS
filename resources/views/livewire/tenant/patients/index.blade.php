@@ -40,7 +40,7 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
     public function openQuick(): void
     {
         $this->authorize('patients.create');
-        $this->quick = ['first_name' => '', 'last_name' => '', 'gender' => 'male', 'age' => '', 'phone' => '', 'chief_complaint' => ''];
+        $this->quick = ['first_name' => '', 'last_name' => '', 'gender' => 'male', 'age' => '', 'phone' => '', 'cnic' => '', 'chief_complaint' => ''];
         $this->createdId = null;
         $this->opdDoctor = null;
         $this->duplicates = [];
@@ -53,7 +53,7 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
         $this->duplicates = [];
     }
 
-    /** Same phone number (last 10 digits, so 0300… and +92300… match) or same name and gender. */
+    /** Same CNIC, same phone number (last 10 digits, so 0300… and +92300… match) or same name and gender. */
     protected function findDuplicates(array $data): array
     {
         $digits = substr(preg_replace('/\D/', '', (string) $data['phone']), -10);
@@ -63,6 +63,9 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
                 $q->where(fn ($q) => $q->where('first_name', $data['first_name'])->where('last_name', $data['last_name'] ?: null)->where('gender', $data['gender']));
                 if (strlen($digits) >= 7) {
                     $q->orWhereRaw("REPLACE(REPLACE(phone, ' ', ''), '-', '') LIKE ?", ["%{$digits}"]);
+                }
+                if ($data['cnic']) {
+                    $q->orWhere('cnic', Patient::formatCnic($data['cnic']));
                 }
             })
             ->limit(5)->get()
@@ -80,9 +83,10 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
             'quick.gender' => 'required|in:male,female,other',
             'quick.age' => 'required|integer|min:0|max:130',
             'quick.phone' => 'nullable|string|max:30',
+            'quick.cnic' => ['nullable', Patient::CNIC_RULE],
             'quick.chief_complaint' => 'nullable|string|max:200',
             'opdDoctor' => 'nullable|integer',
-        ], [], ['quick.first_name' => 'first name', 'quick.age' => 'age'])['quick'];
+        ], ['quick.cnic.regex' => Patient::CNIC_MESSAGE], ['quick.first_name' => 'first name', 'quick.age' => 'age', 'quick.cnic' => 'CNIC'])['quick'];
 
         if (! $confirmed && $this->duplicates = $this->findDuplicates($data)) {
             return;
@@ -95,6 +99,7 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
             'gender' => $data['gender'],
             'date_of_birth' => now()->subYears((int) $data['age'])->startOfYear()->toDateString(),
             'phone' => $data['phone'] ?: null,
+            'cnic' => $data['cnic'] ?: null,
             'registration_type' => 'quick',
             'registered_by' => auth()->id(),
         ]);
@@ -226,6 +231,7 @@ new #[Layout('layouts.app')] #[Title('Patients')] class extends Component
             <x-form.select class="col-md-4" label="Gender" model="quick.gender" :options="config('hms.genders')" :placeholder="false" required />
             <x-form.input class="col-md-4" label="Age (years)" model="quick.age" type="number" min="0" required />
             <x-form.input class="col-md-4" label="Phone" model="quick.phone" />
+            <x-form.input class="col-md-6" label="CNIC" model="quick.cnic" placeholder="35202-1234567-1" />
             @if ($doctors && auth()->user()->can('opd.create'))
                 <div class="col-12"><hr class="mt-0"><h6 class="mb-3">Send to OPD now <small class="text-muted fw-normal">(optional)</small></h6></div>
                 <x-form.search-select class="col-md-6" label="Doctor" model="opdDoctor" :options="$doctors" placeholder="No OPD visit" />

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DemoController;
+use App\Http\Controllers\FbrExportController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\PdfController;
@@ -202,6 +203,7 @@ Route::prefix('h/{hospital}')->middleware('tenant')->group(function () {
                 Volt::route('departments', 'tenant.settings.departments')->middleware('can:departments.manage')->name('departments');
                 Volt::route('insurance-companies', 'tenant.settings.tpas')->name('tpas');
                 Volt::route('audit-logs', 'tenant.settings.audit')->middleware('can:audit.view')->name('audit');
+                Volt::route('fbr-access', 'tenant.settings.fbr')->middleware('can:users.manage')->name('fbr');
             });
         });
     });
@@ -225,6 +227,19 @@ Route::prefix('h/{hospital}')->middleware('tenant')->group(function () {
             Route::get('lab-reports/{orderId}/pdf', [PdfController::class, 'portalLabReport'])->name('lab-report.pdf');
             Route::get('prescriptions/{prescriptionId}/pdf', [PdfController::class, 'portalPrescription'])->name('prescription.pdf');
             Route::get('bills/{invoiceId}/pdf', [PdfController::class, 'portalInvoice'])->name('bill.pdf');
+        });
+    });
+
+    /*
+    | FBR (tax authority) register  /h/{hospital}/fbr  — read-only
+    */
+    Route::prefix('fbr')->name('fbr.')->group(function () {
+        Volt::route('login', 'auth.fbr-login')->middleware('guest')->name('login');
+        Route::post('logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+        Route::middleware(['auth', 'fbr'])->group(function () {
+            Volt::route('/', 'fbr.register')->name('dashboard');
+            Route::get('export/{format}', FbrExportController::class)->whereIn('format', ['csv', 'pdf'])->name('export');
         });
     });
 });

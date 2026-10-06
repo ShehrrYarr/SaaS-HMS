@@ -47,7 +47,7 @@ new #[Layout('layouts.landing')] class extends Component
                 'medicines' => Medicine::count(),
                 'tests' => LabTest::count(),
             ]) : null,
-            'accounts' => config('hms.demo.accounts'),
+            'accounts' => collect(config('hms.demo.accounts'))->except('fbr')->all(),
             'resetHours' => config('hms.demo.reset_every_hours'),
             'plans' => Plan::where('is_active', true)->orderBy('sort_order')->get(),
             'moduleLabels' => collect(config('hms.modules'))->map(fn ($m) => $m['label']),

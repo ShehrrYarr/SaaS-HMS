@@ -30,7 +30,7 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
     public function mount(?Patient $patient = null): void
     {
         $this->patient = $patient?->exists ? $patient : null;
-        $fields = ['first_name', 'last_name', 'gender', 'date_of_birth', 'blood_group', 'phone', 'email', 'national_id', 'marital_status', 'occupation', 'guardian_name',
+        $fields = ['first_name', 'last_name', 'gender', 'date_of_birth', 'blood_group', 'phone', 'email', 'cnic', 'national_id', 'marital_status', 'occupation', 'guardian_name',
             'address', 'city', 'state', 'country', 'postal_code', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
             'tpa_id', 'insurance_policy_no', 'insurance_valid_until', 'notes'];
 
@@ -61,6 +61,7 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
             'form.blood_group' => ['nullable', Rule::in(config('hms.blood_groups'))],
             'form.phone' => 'nullable|string|max:30',
             'form.email' => 'nullable|email|max:150',
+            'form.cnic' => ['nullable', Patient::CNIC_RULE],
             'form.national_id' => 'nullable|string|max:50',
             'form.marital_status' => 'nullable|in:single,married,divorced,widowed',
             'form.occupation' => 'nullable|string|max:100',
@@ -81,7 +82,7 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
             'portal_email' => [Rule::requiredIf($this->portal), 'nullable', 'email',
                 Rule::unique('users', 'email')->where('hospital_id', hospital()->id)->ignore($this->patient?->user_id)],
             'portal_password' => [Rule::requiredIf($this->portal && ! $this->patient?->user_id && blank($this->form['phone'])), 'nullable', 'min:8'],
-        ])['form'];
+        ], ['form.cnic.regex' => Patient::CNIC_MESSAGE], ['form.cnic' => 'CNIC'])['form'];
 
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
 
@@ -138,8 +139,13 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
         // Compare the last 10 digits so "0300 2000001" and "+923002000001" count as the same number.
         $digits = substr(preg_replace('/\D/', '', (string) ($this->form['phone'] ?? '')), -10);
 
+        $cnic = Patient::formatCnic($this->form['cnic'] ?? '');
+
         return [
             'tpas' => Tpa::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'cnicTaken' => $cnic && preg_match('/^\d{5}-\d{7}-\d$/', $cnic)
+                ? Patient::where('cnic', $cnic)->when($this->patient, fn ($q) => $q->whereKeyNot($this->patient->id))->limit(3)->get()
+                : collect(),
             'duplicates' => strlen($digits) >= 7
                 ? Patient::whereRaw("REPLACE(REPLACE(phone, ' ', ''), '-', '') LIKE ?", ["%{$digits}"])->when($this->patient, fn ($q) => $q->whereKeyNot($this->patient->id))->limit(5)->get()
                 : collect(),
@@ -162,8 +168,19 @@ new #[Layout('layouts.app')] #[Title('Patient Registration')] class extends Comp
                         <x-form.input class="col-md-4" label="Date of birth" model="form.date_of_birth" type="date" />
                         <x-form.select class="col-md-4" label="Blood group" model="form.blood_group" :options="array_combine(config('hms.blood_groups'), config('hms.blood_groups'))" />
                         <x-form.select class="col-md-4" label="Marital status" model="form.marital_status" :options="['single' => 'Single', 'married' => 'Married', 'divorced' => 'Divorced', 'widowed' => 'Widowed']" />
-                        <x-form.input class="col-md-4" label="National ID / Passport" model="form.national_id" />
+                        <x-form.input class="col-md-4" label="CNIC" model="form.cnic" placeholder="35202-1234567-1" live />
+                        <x-form.input class="col-md-4" label="Passport / other ID" model="form.national_id" />
                         <x-form.input class="col-md-4" label="Occupation" model="form.occupation" />
+                        @if ($cnicTaken->isNotEmpty())
+                            <div class="col-12">
+                                <div class="alert alert-warning py-2">
+                                    <strong>This CNIC is already registered to:</strong>
+                                    @foreach ($cnicTaken as $d)
+                                        <a href="{{ route('tenant.patients.show', $d) }}" wire:navigate class="ms-2">{{ $d->full_name }} ({{ $d->uhid }})</a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                         <x-form.input class="col-md-4" label="Guardian / Father / Spouse" model="form.guardian_name" />
                     </div>
                 </div>

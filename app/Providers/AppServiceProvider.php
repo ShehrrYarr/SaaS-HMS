@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsureFbrOfficer;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePatient;
 use App\Http\Middleware\EnsureStaff;
@@ -65,6 +66,7 @@ class AppServiceProvider extends ServiceProvider
             IdentifyHospital::class,
             EnsureStaff::class,
             EnsurePatient::class,
+            EnsureFbrOfficer::class,
             EnsureSuperAdmin::class,
             EnsureModuleEnabled::class,
         ]);

@@ -92,6 +92,12 @@ class User extends Authenticatable
             && $this->roles->every(fn ($role) => $role->name === 'Patient');
     }
 
+    /** A tax-authority (FBR) login: it can only open the read-only FBR register. */
+    public function isFbrOfficer(): bool
+    {
+        return $this->hospital_id !== null && $this->hasRole('FBR Officer');
+    }
+
     public function isHospitalAdmin(): bool
     {
         return $this->hasRole('Hospital Admin');
@@ -133,6 +139,10 @@ class User extends Authenticatable
         }
 
         $slug = $this->hospital?->slug;
+
+        if ($this->isFbrOfficer()) {
+            return route('fbr.dashboard', ['hospital' => $slug]);
+        }
 
         return $this->isPatientOnly()
             ? route('portal.dashboard', ['hospital' => $slug])

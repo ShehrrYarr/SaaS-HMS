@@ -28,7 +28,7 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
 
     public function mount(): void
     {
-        $this->roleId ??= Role::where('hospital_id', hospital()->id)->orderBy('name')->value('id');
+        $this->roleId ??= Role::where('hospital_id', hospital()->id)->where('name', '!=', 'FBR Officer')->orderBy('name')->value('id');
         $this->loadRole();
     }
 
@@ -39,7 +39,7 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
 
     protected function role(): Role
     {
-        return Role::where('hospital_id', hospital()->id)->findOrFail($this->roleId);
+        return Role::where('hospital_id', hospital()->id)->where('name', '!=', 'FBR Officer')->findOrFail($this->roleId);
     }
 
     protected function loadRole(): void
@@ -91,7 +91,7 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
         $this->validate(['newRole' => ['required', 'string', 'max:60', Rule::unique('roles', 'name')->where('hospital_id', hospital()->id)]], [], ['newRole' => 'role name']);
         $role = Role::create(['name' => $this->newRole, 'guard_name' => 'web', 'hospital_id' => hospital()->id]);
         if ($this->copyFrom) {
-            $role->syncPermissions(Role::where('hospital_id', hospital()->id)->findOrFail($this->copyFrom)->permissions);
+            $role->syncPermissions(Role::where('hospital_id', hospital()->id)->where('name', '!=', 'FBR Officer')->findOrFail($this->copyFrom)->permissions);
         }
         $this->reset('newRole', 'copyFrom');
         $this->roleId = $role->id;
@@ -113,7 +113,7 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
             return;
         }
         $role->delete();
-        $this->roleId = Role::where('hospital_id', hospital()->id)->orderBy('name')->value('id');
+        $this->roleId = Role::where('hospital_id', hospital()->id)->where('name', '!=', 'FBR Officer')->orderBy('name')->value('id');
         $this->loadRole();
         $this->toast('Role deleted.', 'warning');
     }
@@ -129,7 +129,7 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
     public function with(): array
     {
         $h = hospital();
-        $roles = Role::where('hospital_id', $h->id)->withCount('users')->orderBy('name')->get();
+        $roles = Role::where('hospital_id', $h->id)->where('name', '!=', 'FBR Officer')->withCount('users')->orderBy('name')->get();
 
         return [
             'roles' => $roles,

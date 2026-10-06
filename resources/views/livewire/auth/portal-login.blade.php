@@ -169,7 +169,7 @@ new #[Layout('layouts.guest')] #[Title('Patient Portal')] class extends Componen
         </form>
     @endif
 
-    @include('livewire.auth.partials.demo-buttons', ['portal' => true])
+    @include('livewire.auth.partials.demo-buttons', ['for' => 'portal'])
 
     <p class="mb-0 mt-5 text-muted text-center">Hospital staff? <a href="{{ route('tenant.login') }}" class="text-primary fw-semibold">Staff sign in</a></p>
 </div>

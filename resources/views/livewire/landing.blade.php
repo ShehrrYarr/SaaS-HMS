@@ -47,7 +47,7 @@ new #[Layout('layouts.landing')] class extends Component
                 'medicines' => Medicine::count(),
                 'tests' => LabTest::count(),
             ]) : null,
-            'accounts' => collect(config('hms.demo.accounts'))->except('fbr')->all(),
+            'accounts' => config('hms.demo.accounts'),
             'resetHours' => config('hms.demo.reset_every_hours'),
             'plans' => Plan::where('is_active', true)->orderBy('sort_order')->get(),
             'moduleLabels' => collect(config('hms.modules'))->map(fn ($m) => $m['label']),
@@ -153,7 +153,7 @@ new #[Layout('layouts.landing')] class extends Component
 
             <div class="row g-4 mt-5 text-center">
                 <div class="col-6 col-md-3"><div class="lp-stat">13</div><div class="text-muted fs-13">integrated modules</div></div>
-                <div class="col-6 col-md-3"><div class="lp-stat">10</div><div class="text-muted fs-13">ready-made roles, plus your own</div></div>
+                <div class="col-6 col-md-3"><div class="lp-stat">{{ count(config('hms.default_roles')) }}</div><div class="text-muted fs-13">ready-made roles, plus your own</div></div>
                 <div class="col-6 col-md-3"><div class="lp-stat">100%</div><div class="text-muted fs-13">data isolation per hospital</div></div>
                 <div class="col-6 col-md-3"><div class="lp-stat">0</div><div class="text-muted fs-13">installs: runs in the browser</div></div>
             </div>
@@ -173,7 +173,8 @@ new #[Layout('layouts.landing')] class extends Component
                 </div>
                 <div class="row g-4">
                     @foreach ($accounts as $key => $account)
-                        <div class="col-sm-6 col-lg-3">
+                        {{-- 9 roles: three rows of three on wide screens --}}
+                        <div class="col-sm-6 col-lg-4">
                             <div class="lp-card p-4 d-flex flex-column {{ $key === 'admin' ? 'border-primary' : '' }}">
                                 <div class="d-flex align-items-center gap-3 mb-3">
                                     <span class="lp-icon bg-{{ $account['color'] }}-subtle text-{{ $account['color'] }}"><i class="{{ $account['icon'] }}"></i></span>

@@ -52,7 +52,7 @@ return [
             'lab' => ['email' => 'lab@cityhospital.test', 'label' => 'Lab Technician', 'icon' => 'ri-flask-line', 'color' => 'secondary', 'blurb' => 'Samples, barcodes, results & QC'],
             'accounts' => ['email' => 'accounts@cityhospital.test', 'label' => 'Accountant', 'icon' => 'ri-money-rupee-circle-line', 'color' => 'success', 'blurb' => 'Invoices, claims, expenses, tax reports'],
             'patient' => ['email' => 'patient@cityhospital.test', 'label' => 'Patient Portal', 'icon' => 'ri-user-heart-line', 'color' => 'primary', 'blurb' => 'Appointments, reports, bills, video consult'],
-            'fbr' => ['email' => 'fbr@cityhospital.test', 'label' => 'FBR Officer', 'icon' => 'ri-government-line', 'color' => 'dark', 'blurb' => 'Read-only patient visit register with CSV & PDF export'],
+            'fbr' => ['email' => 'fbr@cityhospital.test', 'label' => 'FBR / Tax Authority', 'icon' => 'ri-government-line', 'color' => 'dark', 'blurb' => 'Read-only register of patient visits by date, for tax audits'],
         ],
     ],
 

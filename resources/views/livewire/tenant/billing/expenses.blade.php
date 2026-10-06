@@ -151,12 +151,12 @@ new #[Layout('layouts.app')] #[Title('Expenses')] class extends Component
                             @forelse ($expenses as $e)
                                 <tr wire:key="exp-{{ $e->id }}">
                                     <td>{{ fmt_date($e->expense_date) }}</td>
-                                    <td>{{ $e->title }} @if ($e->attachment_path)<a href="{{ route('files.show', ['path' => $e->attachment_path]) }}" target="_blank"><i class="ri-attachment-2"></i></a>@endif<div class="fs-12 text-muted">{{ $e->reference }}</div></td>
+                                    <td>{{ $e->title }} @if ($e->attachment_path)<a title="Open attachment" aria-label="Open attachment" href="{{ route('files.show', ['path' => $e->attachment_path]) }}" target="_blank"><i class="ri-attachment-2"></i></a>@endif<div class="fs-12 text-muted">{{ $e->reference }}</div></td>
                                     <td>{{ $e->category?->name ?? '—' }}</td><td>{{ $e->paid_to }}</td><td>{{ $e->account?->label ?? label($e->payment_method) }}</td>
                                     <td class="text-end">{{ money($e->amount) }}</td>
                                     <td class="text-end text-nowrap">
-                                        <button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $e->id }})"><i class="ri-edit-line"></i></button>
-                                        <button class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Delete expense?', () => $wire.delete({{ $e->id }}))"><i class="ri-delete-bin-line"></i></button>
+                                        <button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $e->id }})"><i class="ri-edit-line"></i></button>
+                                        <button title="Delete" aria-label="Delete" class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Delete expense?', () => $wire.delete({{ $e->id }}))"><i class="ri-delete-bin-line"></i></button>
                                     </td>
                                 </tr>
                             @empty

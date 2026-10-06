@@ -11,10 +11,10 @@
 
                 <!-- Share Buttons -->
                 <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
-                    <button class="btn btn-facebook share-button"><i class="ri-facebook-line fs-4"></i></button>
-                    <button class="btn btn-twitter share-button"><i class="ri-twitter-line fs-4"></i></button>
-                    <button class="btn btn-whatsapp share-button"><i class="ri-whatsapp-line fs-4"></i></button>
-                    <button class="btn btn-linkedin share-button"><i class="ri-linkedin-line fs-4"></i></button>
+                    <button title="Share on Facebook" aria-label="Share on Facebook" class="btn btn-facebook share-button"><i class="ri-facebook-line fs-4"></i></button>
+                    <button title="Share on X" aria-label="Share on X" class="btn btn-twitter share-button"><i class="ri-twitter-line fs-4"></i></button>
+                    <button title="Share on WhatsApp" aria-label="Share on WhatsApp" class="btn btn-whatsapp share-button"><i class="ri-whatsapp-line fs-4"></i></button>
+                    <button title="Share on LinkedIn" aria-label="Share on LinkedIn" class="btn btn-linkedin share-button"><i class="ri-linkedin-line fs-4"></i></button>
                 </div>
 
                 <p class="text-muted">or copy the link</p>

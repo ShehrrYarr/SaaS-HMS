@@ -74,7 +74,7 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
                             <td class="fw-semibold">{{ $inv->invoice_no }}</td><td>{{ fmt_date($inv->invoice_date) }}</td><td class="text-end">{{ money($inv->total) }}</td><td class="text-end">{{ money($inv->paid_amount) }}</td>
                             <td class="text-end {{ $inv->balance > 0 ? 'text-danger fw-semibold' : '' }}">{{ money(max(0, $inv->balance)) }}</td><td><x-status :value="$inv->status" /></td>
                             <td class="text-end text-nowrap">
-                                <a href="{{ route('portal.bill.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-download-2-line"></i></a>
+                                <a title="Download" aria-label="Download" href="{{ route('portal.bill.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-download-2-line"></i></a>
                                 @if (in_array($inv->status, ['unpaid', 'partial']))<button class="btn btn-sm btn-success" wire:click="$set('payingId', {{ $inv->id }})">Pay</button>@endif
                             </td>
                         </tr>

@@ -138,7 +138,7 @@ new #[Layout('layouts.app')] #[Title('Doctor Schedules')] class extends Componen
                                                 <span>{{ fmt_time($s->start_time) }}–{{ fmt_time($s->end_time) }} <span class="text-muted">· {{ $s->slot_minutes }}m{{ $s->room ? ' · '.$s->room : '' }}</span></span>
                                                 <span>
                                                     <button class="btn btn-link p-0 fs-12" wire:click="toggle({{ $s->id }})" title="Enable / disable"><i class="ri-toggle-line"></i></button>
-                                                    <button class="btn btn-link p-0 fs-12 text-danger" x-on:click="$confirm('Remove this session?', () => $wire.remove({{ $s->id }}))"><i class="ri-delete-bin-line"></i></button>
+                                                    <button title="Remove" aria-label="Remove" class="btn btn-link p-0 fs-12 text-danger" x-on:click="$confirm('Remove this session?', () => $wire.remove({{ $s->id }}))"><i class="ri-delete-bin-line"></i></button>
                                                 </span>
                                             </div>
                                         @empty

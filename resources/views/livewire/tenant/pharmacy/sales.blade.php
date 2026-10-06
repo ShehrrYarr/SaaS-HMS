@@ -138,8 +138,8 @@ new #[Layout('layouts.app')] #[Title('Pharmacy Sales')] class extends Component
                             <td class="fs-12">{{ $s->seller?->name }}</td>
                             <td><x-status :value="$s->status" /></td>
                             <td class="text-end text-nowrap">
-                                <button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="view({{ $s->id }})"><i class="ri-eye-line"></i></button>
-                                <a href="{{ route('tenant.pharmacy.receipt', $s->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-printer-line"></i></a>
+                                <button title="View" aria-label="View" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="view({{ $s->id }})"><i class="ri-eye-line"></i></button>
+                                <a title="Print" aria-label="Print" href="{{ route('tenant.pharmacy.receipt', $s->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-printer-line"></i></a>
                             </td>
                         </tr>
                     @empty

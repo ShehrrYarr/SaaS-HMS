@@ -75,7 +75,7 @@ new #[Layout('layouts.app')] #[Title('Service Charges')] class extends Component
                 <tbody>
                     @forelse ($services as $s)
                         <tr class="{{ $s->is_active ? '' : 'opacity-50' }}"><td>{{ $s->code }}</td><td>{{ $s->name }}</td><td>{{ label($s->category) }}</td><td class="text-end">{{ money($s->price) }}</td><td class="text-end">{{ (float) $s->tax_percent }}</td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td></tr>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td></tr>
                     @empty
                         <x-empty-row :colspan="6" message="No services." />
                     @endforelse

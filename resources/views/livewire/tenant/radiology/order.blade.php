@@ -201,11 +201,11 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
                                     @if ($a->type === 'image')
                                         <a href="{{ route('files.show', ['path' => $a->file_path]) }}" target="_blank"><img src="{{ route('files.show', ['path' => $a->file_path]) }}" class="img-fluid rounded mb-1" style="max-height: 110px;" alt=""></a>
                                     @else
-                                        <a href="{{ route('files.show', ['path' => $a->file_path]) }}" target="_blank" class="d-block py-3"><i class="{{ $a->type === 'dicom' ? 'ri-file-search-line' : 'ri-file-pdf-2-line' }} fs-1"></i></a>
+                                        <a title="Open file" aria-label="Open file" href="{{ route('files.show', ['path' => $a->file_path]) }}" target="_blank" class="d-block py-3"><i class="{{ $a->type === 'dicom' ? 'ri-file-search-line' : 'ri-file-pdf-2-line' }} fs-1"></i></a>
                                     @endif
                                     <div class="fs-11 text-truncate">{{ $a->file_name }}</div>
                                     <div class="fs-11 text-muted">{{ strtoupper($a->type) }} · {{ human_bytes($a->size) }}</div>
-                                    @can('radiology.perform')<button class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 p-1" x-on:click="$confirm('Delete file?', () => $wire.deleteAttachment({{ $a->id }}))"><i class="ri-close-line"></i></button>@endcan
+                                    @can('radiology.perform')<button title="Delete file" aria-label="Delete file" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0 p-1" x-on:click="$confirm('Delete file?', () => $wire.deleteAttachment({{ $a->id }}))"><i class="ri-close-line"></i></button>@endcan
                                 </div>
                             </div>
                         @empty

@@ -47,7 +47,7 @@ new class extends Component
             <x-form.input class="col-md-3 mb-0" label="Title" model="form.title" placeholder="e.g. Type 2 diabetes" />
             <x-form.input class="col-md-3 mb-0" label="Details" model="form.details" />
             <x-form.input class="col-md-2 mb-0" label="Since" model="form.since_date" type="date" />
-            <div class="col-md-1"><button class="btn btn-primary w-100" wire:click="save"><i class="ri-add-line"></i></button></div>
+            <div class="col-md-1"><button title="Add" aria-label="Add" class="btn btn-primary w-100" wire:click="save"><i class="ri-add-line"></i></button></div>
         </div>
     @endcan
     <div class="row g-3">
@@ -59,7 +59,7 @@ new class extends Component
                         <li class="list-group-item d-flex justify-content-between" wire:key="h-{{ $h->id }}">
                             <div><strong>{{ $h->title }}</strong> @if ($h->since_date)<small class="text-muted">since {{ fmt_date($h->since_date, 'M Y') }}</small>@endif
                                 @if ($h->details)<div class="fs-13 text-muted">{{ $h->details }}</div>@endif</div>
-                            @can('emr.manage')<button class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove entry?', () => $wire.delete({{ $h->id }}))"><i class="ri-close-line"></i></button>@endcan
+                            @can('emr.manage')<button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove entry?', () => $wire.delete({{ $h->id }}))"><i class="ri-close-line"></i></button>@endcan
                         </li>
                     @empty
                         <li class="list-group-item text-muted fs-13">None recorded</li>

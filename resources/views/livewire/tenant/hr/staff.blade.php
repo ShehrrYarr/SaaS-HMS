@@ -188,7 +188,7 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
                             <td>{{ fmt_date($s->joining_date) }}</td>
                             <td class="text-end">{{ money($s->basic_salary + $s->allowances) }}@if ($s->staff_type === 'doctor')<div class="fs-12 text-muted">Fee {{ money($s->consultation_fee) }} · {{ (float) $s->commission_percent }}%</div>@endif</td>
                             <td>@if ($s->user)<span class="badge bg-success-subtle text-success" title="{{ $s->user->email }}">{{ $s->user->roleLabel() }}</span>@else<span class="text-muted fs-12">—</span>@endif</td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td>
                         </tr>
                     @empty
                         <x-empty-row :colspan="9" message="No staff found." icon="ri-team-line" />

@@ -181,7 +181,7 @@ new #[Layout('layouts.app')] #[Title('Patient EMR')] class extends Component
                                     <div class="border rounded p-3 mb-3">
                                         <div class="d-flex justify-content-between mb-2">
                                             <div><strong>{{ $rx->prescription_no }}</strong> &middot; {{ $rx->doctor->display_name }} &middot; <span class="text-muted">{{ fmt_date($rx->created_at) }}</span></div>
-                                            <div><x-status :value="$rx->status" /> <a href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light ms-1"><i class="ri-printer-line"></i></a></div>
+                                            <div><x-status :value="$rx->status" /> <a title="Print" aria-label="Print" href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light ms-1"><i class="ri-printer-line"></i></a></div>
                                         </div>
                                         <ul class="mb-0 fs-13">
                                             @foreach ($rx->items as $i)<li><strong>{{ $i->medicine_name }}</strong> {{ $i->dosage }} — {{ $i->frequency }} × {{ $i->duration }} <span class="text-muted">{{ $i->instructions }}</span></li>@endforeach
@@ -211,7 +211,7 @@ new #[Layout('layouts.app')] #[Title('Patient EMR')] class extends Component
                                         <tbody>
                                             @forelse ($radiologyOrders as $o)
                                                 <tr><td><a href="{{ route('tenant.radiology.order', $o) }}" wire:navigate>{{ $o->order_no }}</a></td><td>{{ $o->test->name }}</td><td>{{ fmt_datetime($o->created_at) }}</td><td><x-status :value="$o->status" /></td>
-                                                    <td class="text-end">@if (in_array($o->status, ['reported', 'approved']))<a href="{{ route('tenant.radiology.report', $o->id) }}" target="_blank" class="btn btn-sm btn-light-success"><i class="ri-file-pdf-2-line"></i></a>@endif</td></tr>
+                                                    <td class="text-end">@if (in_array($o->status, ['reported', 'approved']))<a title="Download PDF" aria-label="Download PDF" href="{{ route('tenant.radiology.report', $o->id) }}" target="_blank" class="btn btn-sm btn-light-success"><i class="ri-file-pdf-2-line"></i></a>@endif</td></tr>
                                             @empty <x-empty-row :colspan="5" message="No imaging orders." /> @endforelse
                                         </tbody>
                                     </table>

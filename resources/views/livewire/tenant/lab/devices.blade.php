@@ -98,7 +98,7 @@ new #[Layout('layouts.app')] #[Title('Lab Devices')] class extends Component
                                     <td>{{ strtoupper($d->protocol) }}</td><td>{{ $d->serial_no }}</td><td class="fs-12">{{ $d->last_seen_at?->diffForHumans() ?? 'never' }}</td>
                                     <td><x-status :value="$d->is_active ? 'active' : 'inactive'" /></td>
                                     <td class="text-end text-nowrap">
-                                        <button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button>
+                                        <button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button>
                                         <button class="btn btn-sm btn-light-warning icon-btn-sm" title="Regenerate token" x-on:click="$confirm('Regenerate the token? The current one stops working.', () => $wire.regenerate({{ $d->id }}), { color: 'warning' })"><i class="ri-key-2-line"></i></button>
                                     </td>
                                 </tr>

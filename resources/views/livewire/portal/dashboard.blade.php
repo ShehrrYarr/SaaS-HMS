@@ -71,7 +71,7 @@ new #[Layout('layouts.portal')] #[Title('My Health')] class extends Component
                 <div class="card-header"><h6 class="card-title mb-0">Recent prescriptions</h6></div>
                 <ul class="list-group list-group-flush">
                     @forelse ($prescriptions as $rx)
-                        <li class="list-group-item d-flex justify-content-between align-items-center"><span>{{ $rx->prescription_no }} · {{ $rx->doctor->display_name }} · {{ fmt_date($rx->created_at) }}</span><a href="{{ route('portal.prescription.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light-primary"><i class="ri-download-2-line"></i></a></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><span>{{ $rx->prescription_no }} · {{ $rx->doctor->display_name }} · {{ fmt_date($rx->created_at) }}</span><a title="Download" aria-label="Download" href="{{ route('portal.prescription.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light-primary"><i class="ri-download-2-line"></i></a></li>
                     @empty
                         <li class="list-group-item text-muted">No prescriptions yet.</li>
                     @endforelse

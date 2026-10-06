@@ -76,7 +76,7 @@ new #[Layout('layouts.app')] #[Title('Imaging Catalog')] class extends Component
                 <tbody>
                     @forelse ($tests as $t)
                         <tr class="{{ $t->is_active ? '' : 'opacity-50' }}"><td class="fw-semibold">{{ $t->code }}</td><td>{{ $t->name }}</td><td>{{ $modalities[$t->modality] ?? $t->modality }}</td><td>{{ $t->body_part }}</td><td class="text-end">{{ money($t->price) }}</td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td></tr>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td></tr>
                     @empty
                         <x-empty-row :colspan="6" message="No imaging studies." />
                     @endforelse

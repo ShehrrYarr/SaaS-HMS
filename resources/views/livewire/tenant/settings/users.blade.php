@@ -125,7 +125,7 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
                             <td class="fs-13">{{ $u->staff?->employee_code ?? '—' }}</td>
                             <td class="fs-13">{{ $u->last_login_at?->diffForHumans() ?? 'never' }}</td>
                             <td><x-status :value="$u->status" /></td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $u->id }})"><i class="ri-edit-line"></i></button></td>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $u->id }})"><i class="ri-edit-line"></i></button></td>
                         </tr>
                     @empty
                         <x-empty-row :colspan="6" message="No users." />

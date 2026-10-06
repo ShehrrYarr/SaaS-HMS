@@ -128,7 +128,7 @@ new #[Layout('layouts.app')] #[Title('Blood Donors')] class extends Component
                             <td class="text-end text-nowrap">
                                 @can('bloodbank.manage')
                                     <button class="btn btn-sm btn-danger" wire:click="openDonation({{ $d->id }})" @disabled(! $eligible)><i class="ri-drop-line"></i> Donate</button>
-                                    <button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button>
+                                    <button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button>
                                 @endcan
                             </td>
                         </tr>

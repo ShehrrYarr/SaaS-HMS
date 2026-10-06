@@ -181,7 +181,7 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
                             @foreach ($inv->items as $i)
                                 <tr><td><span class="badge bg-light text-body">{{ strtoupper($i->service_type) }}</span></td><td>{{ $i->description }} @if ($i->doctor)<small class="text-muted d-block">{{ $i->doctor->display_name }}</small>@endif</td>
                                     <td class="text-end">{{ (float) $i->quantity }}</td><td class="text-end">{{ money($i->unit_price) }}</td><td class="text-end">{{ money($i->discount) }}</td><td class="text-end">{{ money($i->tax_amount) }}</td><td class="text-end">{{ money($i->total) }}</td>
-                                    <td class="text-end">@if (! in_array($inv->status, ['paid', 'cancelled']))@can('billing.cancel')<button class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove this item?', () => $wire.removeItem({{ $i->id }}))"><i class="ri-close-line"></i></button>@endcan @endif</td></tr>
+                                    <td class="text-end">@if (! in_array($inv->status, ['paid', 'cancelled']))@can('billing.cancel')<button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger p-0" x-on:click="$confirm('Remove this item?', () => $wire.removeItem({{ $i->id }}))"><i class="ri-close-line"></i></button>@endcan @endif</td></tr>
                             @endforeach
                         </tbody>
                         <tfoot class="fs-13">

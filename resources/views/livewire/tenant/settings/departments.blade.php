@@ -66,7 +66,7 @@ new #[Layout('layouts.app')] #[Title('Departments')] class extends Component
                     @foreach ($departments as $d)
                         <tr><td class="fw-semibold">{{ $d->name }}<div class="fs-12 text-muted">{{ $d->description }}</div></td><td>{{ $d->code }}</td><td>{{ label($d->type) }}</td><td>{{ $d->staff_count }}</td>
                             <td><x-status :value="$d->is_active ? 'active' : 'inactive'" /></td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button></td></tr>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $d->id }})"><i class="ri-edit-line"></i></button></td></tr>
                     @endforeach
                 </tbody>
             </table>

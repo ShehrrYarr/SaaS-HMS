@@ -128,9 +128,9 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
 
 <div>
     <x-page-header title="Financial Reports" :subtitle="fmt_date($from).' – '.fmt_date($to)" :breadcrumbs="['Billing' => route('tenant.billing.invoices')]">
-        <div class="btn-group btn-group-sm">
+        <div class="d-flex flex-wrap gap-1">
             @foreach (['today' => 'Today', 'week' => 'This week', 'month' => 'This month', 'last_month' => 'Last month', 'year' => 'This year'] as $k => $l)
-                <button class="btn btn-light" wire:click="preset('{{ $k }}')">{{ $l }}</button>
+                <button class="btn btn-sm btn-light" wire:click="preset('{{ $k }}')">{{ $l }}</button>
             @endforeach
         </div>
         <input type="date" class="form-control form-control-sm w-auto" wire:model.live="from">

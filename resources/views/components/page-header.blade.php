@@ -14,7 +14,7 @@
         @endif
     </div>
     @if (trim($slot))
-        <div class="d-flex flex-wrap gap-2 my-xl-auto align-items-center flex-shrink-0">
+        <div class="d-flex flex-wrap gap-2 my-xl-auto align-items-center flex-shrink-0" style="max-width: 100%">
             {{ $slot }}
         </div>
     @endif

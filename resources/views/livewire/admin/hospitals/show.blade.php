@@ -220,7 +220,7 @@ new #[Layout('layouts.admin')] #[Title('Manage Hospital')] class extends Compone
                                     <td>{{ fmt_date($inv->period_start) }} – {{ fmt_date($inv->period_end) }}</td>
                                     <td>{{ money($inv->total) }}</td>
                                     <td><x-status :value="$inv->status" /></td>
-                                    <td class="text-end"><a href="{{ route('admin.invoices.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-file-pdf-2-line"></i></a></td>
+                                    <td class="text-end"><a title="Download PDF" aria-label="Download PDF" href="{{ route('admin.invoices.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-file-pdf-2-line"></i></a></td>
                                 </tr>
                             @empty
                                 <x-empty-row :colspan="6" message="No invoices yet." />

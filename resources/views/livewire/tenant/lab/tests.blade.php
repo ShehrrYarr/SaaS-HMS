@@ -144,7 +144,7 @@ new #[Layout('layouts.app')] #[Title('Lab Test Catalog')] class extends Componen
                         <tr wire:key="lt-{{ $t->id }}" class="{{ $t->is_active ? '' : 'opacity-50' }}">
                             <td class="fw-semibold">{{ $t->code }}</td><td>{{ $t->name }}</td><td>{{ $t->category?->name ?? '—' }}</td><td>{{ label($t->sample_type) }} <small class="text-muted">{{ $t->container }}</small></td>
                             <td>{{ $t->parameters_count }}</td><td>{{ $t->turnaround_hours }}h</td><td class="text-end">{{ money($t->price) }}</td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td>
                         </tr>
                     @empty
                         <x-empty-row :colspan="8" message="No tests." />
@@ -188,7 +188,7 @@ new #[Layout('layouts.app')] #[Title('Lab Test Catalog')] class extends Componen
                                 @if ($p['result_type'] === 'option')<input class="form-control form-control-sm" placeholder="Negative, Positive" wire:model="params.{{ $i }}.options">@endif
                                 <input class="form-control form-control-sm mt-1" placeholder="Normal text" wire:model="params.{{ $i }}.ref_text">
                             </td>
-                            <td><button class="btn btn-sm btn-link text-danger" wire:click="removeParam({{ $i }})"><i class="ri-close-line"></i></button></td>
+                            <td><button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger" wire:click="removeParam({{ $i }})"><i class="ri-close-line"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>

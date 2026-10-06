@@ -76,7 +76,7 @@ new class extends Component
                 @error('file')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 <div wire:loading wire:target="file" class="fs-12 text-primary">Uploading…</div>
             </div>
-            <div class="col-md-1"><button class="btn btn-primary w-100" wire:loading.attr="disabled"><i class="ri-upload-2-line"></i></button></div>
+            <div class="col-md-1"><button title="Upload" aria-label="Upload" class="btn btn-primary w-100" wire:loading.attr="disabled"><i class="ri-upload-2-line"></i></button></div>
         </form>
     @endcan
     <div class="row g-3">
@@ -91,7 +91,7 @@ new class extends Component
                         <small class="text-muted d-block">{{ $categories[$d->category] ?? label($d->category) }} · {{ human_bytes($d->size) }}</small>
                         <small class="text-muted">{{ fmt_date($d->created_at) }} · {{ $d->uploader?->name }}</small>
                     </div>
-                    @can('emr.documents')<button class="btn btn-sm btn-link text-danger p-0 align-self-start" x-on:click="$confirm('Delete {{ addslashes($d->title) }}?', () => $wire.delete({{ $d->id }}))"><i class="ri-delete-bin-line"></i></button>@endcan
+                    @can('emr.documents')<button title="Delete" aria-label="Delete" class="btn btn-sm btn-link text-danger p-0 align-self-start" x-on:click="$confirm('Delete {{ addslashes($d->title) }}?', () => $wire.delete({{ $d->id }}))"><i class="ri-delete-bin-line"></i></button>@endcan
                 </div>
             </div>
         @empty

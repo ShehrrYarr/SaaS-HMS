@@ -161,7 +161,7 @@ new #[Layout('layouts.app')] #[Title('New Invoice')] class extends Component
                                         <td><input type="number" step="1" min="0" inputmode="numeric" class="form-control form-control-sm @error('items.'.$i.'.discount') is-invalid @enderror" wire:model.live="items.{{ $i }}.discount"></td>
                                         <td><input type="number" step="0.01" class="form-control form-control-sm" wire:model.live="items.{{ $i }}.tax_percent"></td>
                                         <td class="text-end">{{ money($line + rupees($line * (float) ($item['tax_percent'] ?: 0) / 100)) }}</td>
-                                        <td><button class="btn btn-sm btn-link text-danger" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button></td>
+                                        <td><button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button></td>
                                     </tr>
                                 @endforeach
                             </tbody>

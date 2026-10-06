@@ -6,7 +6,7 @@
         <div class="input-group has-validation">
             <input :type="show ? 'text' : 'password'" id="password" wire:model="password" autocomplete="current-password"
                 class="form-control @error('password') is-invalid @enderror" placeholder="Enter your password">
-            <button type="button" class="input-group-text bg-transparent" x-on:click="show = !show" tabindex="-1">
+            <button title="Show or hide password" aria-label="Show or hide password" type="button" class="input-group-text bg-transparent" x-on:click="show = !show" tabindex="-1">
                 <i class="text-muted" :class="show ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
             </button>
             @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror

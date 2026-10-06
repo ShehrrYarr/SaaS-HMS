@@ -72,7 +72,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Companies')] class extends Compo
                 <tbody>
                     @forelse ($tpas as $t)
                         <tr><td class="fw-semibold">{{ $t->name }}</td><td>{{ $t->code }}</td><td>{{ $t->contact_person }}</td><td class="fs-12">{{ $t->phone }}<div>{{ $t->email }}</div></td><td>{{ $t->patients_count }}</td><td>{{ $t->claims_count }}</td>
-                            <td><x-status :value="$t->is_active ? 'active' : 'inactive'" /></td><td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td></tr>
+                            <td><x-status :value="$t->is_active ? 'active' : 'inactive'" /></td><td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $t->id }})"><i class="ri-edit-line"></i></button></td></tr>
                     @empty
                         <x-empty-row :colspan="8" message="No insurance companies." />
                     @endforelse

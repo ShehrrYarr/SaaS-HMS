@@ -78,7 +78,7 @@ new #[Layout('layouts.app')] #[Title('Suppliers')] class extends Component
                         <tr wire:key="sup-{{ $s->id }}" class="{{ $s->is_active ? '' : 'opacity-50' }}">
                             <td class="fw-semibold">{{ $s->name }}</td><td>{{ $s->contact_person }}</td><td>{{ $s->phone }}</td><td>{{ $s->email }}</td><td>{{ $s->tax_no }}</td>
                             <td class="text-end">{{ $s->purchase_orders_count }}</td><td class="text-end">{{ money($s->purchased ?? 0) }}</td>
-                            <td class="text-end"><button class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td>
+                            <td class="text-end"><button title="Edit" aria-label="Edit" class="btn btn-sm btn-light-primary icon-btn-sm" wire:click="edit({{ $s->id }})"><i class="ri-edit-line"></i></button></td>
                         </tr>
                     @empty
                         <x-empty-row :colspan="8" message="No suppliers." />

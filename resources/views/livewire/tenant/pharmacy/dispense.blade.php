@@ -50,28 +50,30 @@ new #[Layout('layouts.app')] #[Title('Dispense Prescriptions')] class extends Co
                         </div>
                         <div class="d-flex gap-1">
                             <x-status :value="$rx->status" />
-                            <a href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line"></i></a>
+                            <a title="Print" aria-label="Print" href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line"></i></a>
                             @if (in_array($rx->status, ['issued', 'partially_dispensed']))
                                 @can('pharmacy.sell')<a href="{{ route('tenant.pharmacy.pos', ['prescription' => $rx->id]) }}" wire:navigate class="btn btn-sm btn-primary"><i class="ri-capsule-line me-1"></i>Dispense</a>@endcan
                             @endif
                         </div>
                     </div>
-                    <table class="table table-sm mb-0 fs-13">
-                        <thead><tr><th>Medicine</th><th>Dose / frequency</th><th>Duration</th><th class="text-end">Qty</th><th class="text-end">Dispensed</th><th class="text-end">Stock</th></tr></thead>
-                        <tbody>
-                            @foreach ($rx->items as $i)
-                                @php $available = $i->medicine_id ? (int) ($stock[$i->medicine_id] ?? 0) : null; @endphp
-                                <tr>
-                                    <td>{{ $i->medicine_name }} @unless ($i->medicine_id)<span class="badge bg-light text-muted">not in formulary</span>@endunless</td>
-                                    <td>{{ $i->dosage }} · {{ $i->frequency }}</td>
-                                    <td>{{ $i->duration }}</td>
-                                    <td class="text-end">{{ $i->quantity }}</td>
-                                    <td class="text-end">{{ $i->dispensed_qty }}</td>
-                                    <td class="text-end {{ $available !== null && $available < $i->pending_qty ? 'text-danger fw-semibold' : '' }}">{{ $available ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 fs-13">
+                            <thead><tr><th>Medicine</th><th>Dose / frequency</th><th>Duration</th><th class="text-end">Qty</th><th class="text-end">Dispensed</th><th class="text-end">Stock</th></tr></thead>
+                            <tbody>
+                                @foreach ($rx->items as $i)
+                                    @php $available = $i->medicine_id ? (int) ($stock[$i->medicine_id] ?? 0) : null; @endphp
+                                    <tr>
+                                        <td>{{ $i->medicine_name }} @unless ($i->medicine_id)<span class="badge bg-light text-muted">not in formulary</span>@endunless</td>
+                                        <td>{{ $i->dosage }} · {{ $i->frequency }}</td>
+                                        <td>{{ $i->duration }}</td>
+                                        <td class="text-end">{{ $i->quantity }}</td>
+                                        <td class="text-end">{{ $i->dispensed_qty }}</td>
+                                        <td class="text-end {{ $available !== null && $available < $i->pending_qty ? 'text-danger fw-semibold' : '' }}">{{ $available ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                     @if ($rx->advice)<div class="fs-12 text-muted mt-2">Advice: {{ $rx->advice }}</div>@endif
                 </div>
             @empty

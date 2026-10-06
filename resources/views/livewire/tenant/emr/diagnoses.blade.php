@@ -99,7 +99,7 @@ new class extends Component
                     <div class="fs-12 text-muted">{{ label($d->type) }} · {{ $d->diagnosedBy?->name }} · {{ fmt_date($d->created_at) }}</div>
                 </div>
                 @if ($canAdd)
-                    <button class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Remove this diagnosis?', () => $wire.delete({{ $d->id }}))"><i class="ri-delete-bin-line"></i></button>
+                    <button title="Remove" aria-label="Remove" class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Remove this diagnosis?', () => $wire.delete({{ $d->id }}))"><i class="ri-delete-bin-line"></i></button>
                 @endif
             </li>
         @empty

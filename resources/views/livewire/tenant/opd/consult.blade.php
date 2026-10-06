@@ -369,7 +369,7 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
                     @can('prescriptions.create')
                         @foreach ($items as $i => $item)
                             <div class="border rounded p-2 mb-2 position-relative" wire:key="rx-{{ $i }}">
-                                <button class="btn btn-sm btn-link text-danger position-absolute top-0 end-0" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button>
+                                <button title="Remove" aria-label="Remove" class="btn btn-sm btn-link text-danger position-absolute top-0 end-0" wire:click="removeItem({{ $i }})"><i class="ri-close-line"></i></button>
                                 <x-form.search-select class="mb-2 me-4" model="items.{{ $i }}.medicine_id" search="searchMedicines" placeholder="Pharmacy medicine (or type below)" live :selected-label="$item['medicine_name']" />
                                 <input type="text" class="form-control form-control-sm mb-2 @error('items.'.$i.'.medicine_name') is-invalid @enderror" placeholder="Medicine name" wire:model="items.{{ $i }}.medicine_name">
                                 <div class="row g-1">
@@ -402,7 +402,7 @@ new #[Layout('layouts.app')] #[Title('Consultation')] class extends Component
                         @foreach ($prescriptions as $rx)
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="fs-13"><strong>{{ $rx->prescription_no }}</strong> · {{ $rx->items->count() }} item(s) <x-status :value="$rx->status" /></span>
-                                <a href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line"></i></a>
+                                <a title="Print" aria-label="Print" href="{{ route('tenant.prescriptions.pdf', $rx->id) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line"></i></a>
                             </div>
                         @endforeach
                     @endif

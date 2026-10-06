@@ -5,7 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Error' }} | {{ config('app.name') }}</title>
     <link rel="shortcut icon" href="{{ asset('assets/images/Favicon.png') }}">
-    <script src="{{ asset_v('assets/js/layout/layout-auth.js') }}"></script>
+    {{-- Follow the app's light/dark choice. No layout engine here: re-declaring its globals breaks wire:navigate onto an error page. --}}
+    <script>
+        (function () {
+            var theme = sessionStorage.getItem('data-bs-theme') || 'light';
+            if (theme === 'auto') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
     <link rel="stylesheet" href="{{ asset_v('assets/css/icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset_v('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset_v('assets/css/app.min.css') }}">

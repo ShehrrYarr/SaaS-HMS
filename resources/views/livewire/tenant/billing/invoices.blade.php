@@ -94,7 +94,7 @@ new #[Layout('layouts.app')] #[Title('Invoices')] class extends Component
                             <td class="text-end {{ $inv->balance > 0 && $inv->status !== 'cancelled' ? 'text-danger fw-semibold' : '' }}">{{ $inv->status === 'cancelled' ? '—' : money(max(0, $inv->balance)) }}</td>
                             <td><x-status :value="$inv->status" /></td>
                             <td class="text-end text-nowrap">
-                                <a href="{{ route('tenant.billing.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-printer-line"></i></a>
+                                <a title="Print" aria-label="Print" href="{{ route('tenant.billing.pdf', $inv->id) }}" target="_blank" class="btn btn-sm btn-light icon-btn-sm"><i class="ri-printer-line"></i></a>
                                 <a href="{{ route('tenant.billing.show', $inv) }}" wire:navigate class="btn btn-sm btn-light-primary">Open</a>
                             </td>
                         </tr>

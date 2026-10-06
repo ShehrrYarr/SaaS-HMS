@@ -47,7 +47,7 @@ new class extends Component
             <x-form.select class="col-md-2 mb-0" label="Type" model="form.type" :options="['drug' => 'Drug', 'food' => 'Food', 'environmental' => 'Environmental', 'other' => 'Other']" :placeholder="false" />
             <x-form.input class="col-md-3 mb-0" label="Reaction" model="form.reaction" />
             <x-form.select class="col-md-2 mb-0" label="Severity" model="form.severity" :options="['mild' => 'Mild', 'moderate' => 'Moderate', 'severe' => 'Severe']" :placeholder="false" />
-            <div class="col-md-1"><button class="btn btn-primary w-100" wire:click="save"><i class="ri-add-line"></i></button></div>
+            <div class="col-md-1"><button title="Add" aria-label="Add" class="btn btn-primary w-100" wire:click="save"><i class="ri-add-line"></i></button></div>
         </div>
     @endcan
     <table class="table table-hms table-sm mb-0">
@@ -58,7 +58,7 @@ new class extends Component
                     <td class="fw-semibold">{{ $a->allergen }}</td><td>{{ label($a->type) }}</td><td>{{ $a->reaction ?: '—' }}</td>
                     <td><span class="badge bg-{{ $a->severity === 'severe' ? 'danger' : ($a->severity === 'moderate' ? 'warning' : 'info') }}-subtle text-{{ $a->severity === 'severe' ? 'danger' : ($a->severity === 'moderate' ? 'warning' : 'info') }}">{{ label($a->severity) }}</span></td>
                     <td class="fs-12 text-muted">{{ fmt_date($a->created_at) }} · {{ $a->recorder?->name }}</td>
-                    <td class="text-end">@can('emr.manage')<button class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Remove allergy?', () => $wire.delete({{ $a->id }}))"><i class="ri-delete-bin-line"></i></button>@endcan</td>
+                    <td class="text-end">@can('emr.manage')<button title="Remove" aria-label="Remove" class="btn btn-sm btn-light-danger icon-btn-sm" x-on:click="$confirm('Remove allergy?', () => $wire.delete({{ $a->id }}))"><i class="ri-delete-bin-line"></i></button>@endcan</td>
                 </tr>
             @empty
                 <x-empty-row :colspan="6" message="No known allergies." />

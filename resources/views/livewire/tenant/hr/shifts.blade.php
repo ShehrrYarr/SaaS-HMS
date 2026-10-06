@@ -112,9 +112,9 @@ new #[Layout('layouts.app')] #[Title('Shifts & Roster')] class extends Component
 
 <div>
     <x-page-header title="Shifts & Roster" :subtitle="'Week of '.fmt_date($week)">
-        <button class="btn btn-light btn-sm" wire:click="moveWeek(-1)"><i class="ri-arrow-left-s-line"></i></button>
+        <button title="Previous week" aria-label="Previous week" class="btn btn-light btn-sm" wire:click="moveWeek(-1)"><i class="ri-arrow-left-s-line"></i></button>
         <button class="btn btn-light btn-sm" wire:click="$set('week', '{{ today()->startOfWeek()->toDateString() }}')">This week</button>
-        <button class="btn btn-light btn-sm" wire:click="moveWeek(1)"><i class="ri-arrow-right-s-line"></i></button>
+        <button title="Next week" aria-label="Next week" class="btn btn-light btn-sm" wire:click="moveWeek(1)"><i class="ri-arrow-right-s-line"></i></button>
         <button class="btn btn-light-info btn-sm" wire:click="copyPreviousWeek">Copy last week</button>
         <button class="btn btn-primary btn-sm" wire:click="createShift"><i class="ri-add-line me-1"></i>Shift</button>
     </x-page-header>

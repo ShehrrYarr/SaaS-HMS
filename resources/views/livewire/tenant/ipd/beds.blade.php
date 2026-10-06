@@ -71,7 +71,7 @@ new #[Layout('layouts.app')] #[Title('Bed Matrix')] class extends Component
                                     <strong><i class="ri-hotel-bed-line me-1"></i>{{ $bed->bed_no }}</strong>
                                     @if ($bed->status !== 'occupied')
                                         <div class="dropdown">
-                                            <button class="btn btn-sm btn-link p-0" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>
+                                            <button title="More actions" aria-label="More actions" class="btn btn-sm btn-link p-0" data-bs-toggle="dropdown"><i class="ri-more-2-fill"></i></button>
                                             <div class="dropdown-menu dropdown-menu-end">
                                                 @foreach (['available', 'reserved', 'cleaning', 'maintenance'] as $s)
                                                     @if ($s !== $bed->status)<button class="dropdown-item" wire:click="setStatus({{ $bed->id }}, '{{ $s }}')">Mark {{ label($s) }}</button>@endif

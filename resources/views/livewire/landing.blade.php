@@ -74,7 +74,7 @@ new #[Layout('layouts.landing')] class extends Component
     <nav class="navbar navbar-expand-lg fixed-top lp-nav py-3">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2 lp-brand" href="{{ route('home') }}">
-                <img src="{{ asset('assets/images/Favicon.png') }}" height="32" alt=""> {{ $platform }}
+                <img src="{{ asset('assets/images/hms-mark.png') }}" height="32" alt=""> {{ $platform }}
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#lpNav" aria-label="Menu"><i class="ri-menu-line fs-4"></i></button>
             <div class="collapse navbar-collapse" id="lpNav">
@@ -364,7 +364,7 @@ new #[Layout('layouts.landing')] class extends Component
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-5">
-                    <div class="d-flex align-items-center gap-2 mb-2"><img src="{{ asset('assets/images/Favicon.png') }}" height="28" alt=""><strong class="text-white">{{ $platform }}</strong></div>
+                    <div class="d-flex align-items-center gap-2 mb-2"><img src="{{ asset('assets/images/hms-mark.png') }}" height="28" alt=""><strong class="text-white">{{ $platform }}</strong></div>
                     <p class="fs-13 mb-0">Cloud hospital management for clinics, hospitals and healthcare groups.</p>
                 </div>
                 <div class="col-6 col-md-3">

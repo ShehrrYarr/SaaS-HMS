@@ -1,14 +1,14 @@
 @php
     $menu = \App\Support\Menu::for($area);
     $homeUrl = auth()->user()?->homeUrl() ?? url('/');
-    $logo = $area === 'admin' ? asset('assets/images/light-logo.png') : (hospital()?->logoUrl() ?? asset('assets/images/light-logo.png'));
+    $logo = $area === 'admin' ? asset('assets/images/hms-logo.png') : (hospital()?->logoUrl() ?? asset('assets/images/hms-logo.png'));
 @endphp
 <!-- START SIDEBAR -->
 <aside class="app-sidebar">
     <div class="app-sidebar-logo px-6 justify-content-center align-items-center">
         <a href="{{ $homeUrl }}" wire:navigate>
             <img height="35" class="app-sidebar-logo-default hms-logo" alt="Logo" src="{{ $logo }}">
-            <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/Favicon.png') }}">
+            <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/hms-mark.png') }}">
         </a>
     </div>
     <nav class="app-sidebar-menu nav nav-pills flex-column fs-6" id="sidebarMenu" aria-label="Main navigation">
@@ -23,7 +23,7 @@
         <div class="app-sidebar-logo">
             <a href="{{ $homeUrl }}" wire:navigate>
                 <img height="35" class="app-sidebar-logo-default h-25px hms-logo" alt="Logo" src="{{ $logo }}">
-                <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/Favicon.png') }}">
+                <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/hms-mark.png') }}">
             </a>
         </div>
         <button type="button" class="btn-close bg-transparent" data-bs-dismiss="offcanvas" aria-label="Close">

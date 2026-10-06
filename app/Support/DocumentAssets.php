@@ -49,7 +49,7 @@ class DocumentAssets
         if ($h && ($custom = static::image($h->logo_path))) {
             return $custom;
         }
-        $file = public_path('assets/images/light-logo.png');
+        $file = public_path('assets/images/hms-logo.png');
 
         return 'data:image/png;base64,'.base64_encode(file_get_contents($file));
     }

@@ -9,8 +9,8 @@
             <div class="header-left hstack gap-3">
                 <div class="app-sidebar-logo app-horizontal-logo justify-content-center align-items-center">
                     <a href="{{ $user?->homeUrl() ?? url('/') }}" wire:navigate>
-                        <img height="35" class="app-sidebar-logo-default" alt="Logo" src="{{ asset('assets/images/light-logo.png') }}">
-                        <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/Favicon.png') }}">
+                        <img height="35" class="app-sidebar-logo-default" alt="Logo" src="{{ asset('assets/images/hms-logo.png') }}">
+                        <img height="40" class="app-sidebar-logo-minimize" alt="Logo" src="{{ asset('assets/images/hms-mark.png') }}">
                     </a>
                 </div>
 

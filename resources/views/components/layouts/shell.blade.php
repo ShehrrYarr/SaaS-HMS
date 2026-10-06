@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ? $title.' | ' : '' }}{{ $brand }}</title>
-    <link rel="shortcut icon" href="{{ asset('assets/images/Favicon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('assets/images/hms-mark.png') }}">
 
     {{-- Herozi layout engine (theme, sidebar mode, colours). Kept in <head> so wire:navigate never re-runs it. --}}
     <script src="{{ asset_v('assets/js/layout/layout-default.js') }}"></script>

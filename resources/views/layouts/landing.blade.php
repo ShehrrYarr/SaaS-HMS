@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? platform_setting('platform_name', config('app.name')) }}</title>
     <meta name="description" content="Cloud hospital management system: patients & EMR, OPD, IPD, pharmacy POS, laboratory, radiology, billing & insurance, HR & payroll, OT, blood bank, telemedicine and a patient portal — multi-tenant SaaS.">
-    <link rel="shortcut icon" href="{{ asset('assets/images/Favicon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('assets/images/hms-mark.png') }}">
     <link rel="stylesheet" href="{{ asset_v('assets/css/icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset_v('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset_v('assets/css/app.min.css') }}">

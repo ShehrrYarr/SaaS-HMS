@@ -93,7 +93,7 @@ class Hospital extends Model
     {
         return $this->logo_path
             ? route('files.show', ['path' => $this->logo_path])
-            : asset('assets/images/light-logo.png');
+            : asset('assets/images/hms-logo.png');
     }
 
     public function fullAddress(): string

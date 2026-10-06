@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title.' | ' : '' }}{{ hospital()?->name ?? config('app.name') }}</title>
-    <link rel="shortcut icon" href="{{ asset('assets/images/Favicon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('assets/images/hms-mark.png') }}">
     <script src="{{ asset_v('assets/js/layout/layout-auth.js') }}"></script>
     <script src="{{ asset_v('assets/js/layout/layout.js') }}"></script>
     <link rel="stylesheet" href="{{ asset_v('assets/css/icons.min.css') }}">

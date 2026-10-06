@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Error' }} | {{ config('app.name') }}</title>
-    <link rel="shortcut icon" href="{{ asset('assets/images/Favicon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('assets/images/hms-mark.png') }}">
     {{-- Follow the app's light/dark choice. No layout engine here: re-declaring its globals breaks wire:navigate onto an error page. --}}
     <script>
         (function () {

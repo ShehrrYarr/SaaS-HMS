@@ -41,7 +41,7 @@ class PdfController extends Controller
 
         $pdf = Pdf::loadView('pdf.subscription-invoice', [
             'invoice' => $invoice, 'customer' => $hospital,
-            'logo' => 'data:image/png;base64,'.base64_encode(file_get_contents(public_path('assets/images/light-logo.png'))),
+            'logo' => 'data:image/png;base64,'.base64_encode(file_get_contents(public_path('assets/images/hms-logo.png'))),
         ])->setOption(['defaultFont' => 'DejaVu Sans', 'isFontSubsettingEnabled' => true]);
 
         return $pdf->stream($invoice->number.'.pdf');

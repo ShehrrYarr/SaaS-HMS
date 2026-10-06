@@ -25,6 +25,8 @@ new #[Layout('layouts.app')] #[Title('Video Consultation')] class extends Compon
 
     public function startVisit(OpdService $opd)
     {
+        $this->authorize('opd.consult');
+        abort_unless(hospital()->hasModule('opd'), 403);
         $visit = $this->appointment->opdVisit ?? $opd->checkIn($this->appointment);
         $opd->startConsultation($visit);
         $this->toast('Consultation opened in a new tab.');

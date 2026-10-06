@@ -112,8 +112,11 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
     public function updatedCart($value, $key): void
     {
+        if (substr_count((string) $key, '.') !== 1) {
+            return;
+        }
         [$id, $field] = explode('.', $key);
-        if ($field === 'qty') {
+        if ($field === 'qty' && isset($this->cart[$id])) {
             $line = &$this->cart[$id];
             $line['qty'] = max(1, min((int) $value, (int) $line['stock']));
         }
@@ -174,6 +177,30 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
         return compact('subtotal', 'tax', 'discount', 'total') + ['change' => max(0, rupees($this->tendered) - $total)];
     }
 
+    /**
+     * The cart lives in the browser between requests, so price, tax and the prescription-only flag
+     * are re-read from the database before a sale; a tampered request cannot change them.
+     */
+    protected function refreshCartFromDatabase(): void
+    {
+        $medicines = Medicine::whereIn('id', array_keys($this->cart))->get()->keyBy('id');
+        foreach ($this->cart as $id => $line) {
+            $m = $medicines[$id] ?? null;
+            if (! $m) {
+                unset($this->cart[$id]);
+
+                continue;
+            }
+            $this->cart[$id] = array_merge($line, [
+                'medicine_id' => $m->id,
+                'price' => rupees($m->sellableBatches()->value('sale_price') ?: $m->sale_price),
+                'tax' => (float) $m->tax_percent,
+                'rx' => (bool) $m->requires_prescription,
+                'qty' => max(1, (int) ($line['qty'] ?? 1)),
+            ]);
+        }
+    }
+
     public function checkout(PharmacyService $pharmacy): void
     {
         $this->authorize('pharmacy.sell');
@@ -190,6 +217,17 @@ new #[Layout('layouts.app')] #[Title('Pharmacy POS')] class extends Component
 
             return;
         }
+        if ($this->admission_id && ! IpdAdmission::where('status', 'admitted')->whereKey($this->admission_id)->exists()) {
+            $this->addError('payment_method', 'That admission is not active.');
+
+            return;
+        }
+        if ($this->prescription_id && ! Prescription::whereKey($this->prescription_id)->exists()) {
+            $this->addError('cart', 'That prescription was not found.');
+
+            return;
+        }
+        $this->refreshCartFromDatabase();
         $warnings = $this->allergyWarnings();
         if ($warnings && ! $this->allergyReviewed) {
             $this->addError('allergy', 'A medicine in the cart may trigger a recorded allergy. Check it, then tick the box to continue.');

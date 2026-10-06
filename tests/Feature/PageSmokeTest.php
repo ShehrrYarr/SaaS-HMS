@@ -139,7 +139,7 @@ class PageSmokeTest extends TestCase
         $this->get('/admin/login')->assertOk();
         $this->get('/h/city-hospital/login')->assertOk();
         $this->get('/h/city-hospital/portal/login')->assertOk();
-        $this->get('/template/index')->assertOk();
+        $this->get('/template/index')->assertStatus(config('hms.template_demo') ? 200 : 404); // off by default (production)
         $key = $this->hospital()->setting('queue_display_key');
         $this->get("/h/city-hospital/queue-display?key={$key}")->assertOk();
         $this->get('/h/city-hospital/queue-display?key=wrong')->assertForbidden();

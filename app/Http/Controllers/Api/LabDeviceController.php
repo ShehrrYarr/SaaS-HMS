@@ -16,7 +16,7 @@ class LabDeviceController extends Controller
         $token = (string) $request->bearerToken();
         abort_if($token === '', 401, 'Missing device token.');
 
-        $device = LabDevice::withoutHospitalScope()->where('api_token', $token)->where('is_active', true)->first();
+        $device = LabDevice::withoutHospitalScope()->where('api_token', LabDevice::hashToken($token))->where('is_active', true)->first();
         abort_unless($device, 401, 'Invalid device token.');
 
         $hospital = Hospital::findOrFail($device->hospital_id);

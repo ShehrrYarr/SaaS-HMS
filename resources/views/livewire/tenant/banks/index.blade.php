@@ -196,7 +196,7 @@ new #[Layout('layouts.app')] #[Title('Banks & Cash')] class extends Component
             ],
             'recent' => BankTransaction::with(['account', 'creator'])->latest('transacted_at')->latest('id')->limit(12)->get(),
             'activeOptions' => $accounts->where('is_active', true)->mapWithKeys(fn ($a) => [$a->id => $a->label])->all(),
-            'todayHint' => '<span class="text-success">+'.e(money($totalIn)).'</span> in &middot; <span class="text-danger">-'.e(money($totalOut)).'</span> out',
+            'todayHint' => new \Illuminate\Support\HtmlString('<span class="text-success">+'.e(money($totalIn)).'</span> in &middot; <span class="text-danger">-'.e(money($totalOut)).'</span> out'),
         ];
     }
 }; ?>

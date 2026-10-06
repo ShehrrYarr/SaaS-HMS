@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->prepend(\App\Http\Middleware\ResetTenancy::class);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('admin', 'admin/*')) {

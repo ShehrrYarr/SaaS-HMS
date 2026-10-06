@@ -35,6 +35,9 @@ class FileController extends Controller
                 abort_unless(collect($allowed)->contains(fn ($p) => str_starts_with($path, $p)), 403);
             }
 
+            // Signing certificates (private keys) are only read by the server.
+            abort_if(str_starts_with($path, $prefix.'certificates/'), 403);
+
             // The FBR register shows no uploads: FBR accounts only need the hospital logo.
             if ($user->isFbrOfficer()) {
                 abort_unless(str_starts_with($path, $prefix.'branding/'), 403);
@@ -43,9 +46,20 @@ class FileController extends Controller
 
         abort_unless(Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->response($path, null, [
-            'Cache-Control' => 'private, max-age=3600',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        // Only plain images and PDFs open in the browser. Anything else (HTML, SVG, office files...) is
+        // downloaded, and the sandbox CSP stops an uploaded page from running script on this site.
+        $mime = (string) Storage::disk('local')->mimeType($path);
+        $inline = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'application/pdf'], true);
+
+        $headers = ['Cache-Control' => 'private, max-age=3600', 'X-Content-Type-Options' => 'nosniff'];
+        if ($mime !== 'application/pdf') {
+            // (Chrome refuses to show PDFs under a sandbox CSP, and its PDF viewer is isolated anyway.)
+            $headers['Content-Security-Policy'] = "sandbox; default-src 'none'; img-src 'self'";
+        }
+        if (! $inline) {
+            $headers['Content-Type'] = 'application/octet-stream';
+        }
+
+        return Storage::disk('local')->response($path, null, $headers, $inline ? 'inline' : 'attachment');
     }
 }

@@ -4,6 +4,7 @@ use App\Models\OtpCode;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\Sms\SmsManager;
+use App\Support\LoginThrottle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -37,14 +38,15 @@ new #[Layout('layouts.guest')] #[Title('Patient Portal')] class extends Componen
         $this->validate(['email' => 'required|email', 'password' => 'required|string']);
 
         $key = 'portal-login:'.hospital()->id.'|'.Str::lower($this->email).'|'.request()->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('email', 'Too many attempts. Try again in '.RateLimiter::availableIn($key).' seconds.');
+        if (RateLimiter::tooManyAttempts($key, 5) || LoginThrottle::blocked()) {
+            $this->addError('email', 'Too many attempts. Try again in '.max(RateLimiter::availableIn($key), LoginThrottle::retryAfter()).' seconds.');
 
             return;
         }
 
         if (! Auth::attempt(['hospital_id' => hospital()->id, 'email' => $this->email, 'password' => $this->password, 'status' => 'active'], $this->remember)) {
             RateLimiter::hit($key, 60);
+            LoginThrottle::failed();
             $this->addError('email', 'These credentials do not match our records.');
 
             return;

@@ -12,7 +12,8 @@
 
 return [
 
-    'template_demo' => env('HMS_TEMPLATE_DEMO', true),
+    // The bundled Herozi template pages (/template/*): off unless switched on for local reference.
+    'template_demo' => env('HMS_TEMPLATE_DEMO', false),
 
     'super_admin_email' => env('HMS_SUPER_ADMIN_EMAIL', 'superadmin@hms.test'),
 

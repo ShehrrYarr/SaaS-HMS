@@ -63,7 +63,7 @@ new #[Layout('layouts.app')] #[Title('Financial Reports')] class extends Compone
             $out = fopen('php://output', 'w');
             fputcsv($out, ['Service', 'Taxable value', $label, 'Gross']);
             foreach ($rows as $r) {
-                fputcsv($out, [$r['label'], rupees($r['taxable']), rupees($r['tax']), rupees($r['total'])]);
+                fputcsv($out, csv_safe([$r['label'], rupees($r['taxable']), rupees($r['tax']), rupees($r['total'])]));
             }
             fclose($out);
         }, 'tax-report-'.$this->from.'-to-'.$this->to.'.csv', ['Content-Type' => 'text/csv']);

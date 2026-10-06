@@ -40,7 +40,7 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
         if ($this->demoLocked('Editing the hospital profile')) {
             return;
         }
-        $data = $this->validate([
+        $valid = $this->validate([
             'form.name' => 'required|string|max:150',
             'form.email' => 'nullable|email',
             'form.phone' => 'nullable|string|max:30',
@@ -59,20 +59,23 @@ new #[Layout('layouts.app')] #[Title('Hospital Profile')] class extends Componen
             'settings.report_footer' => 'nullable|string|max:255',
             'settings.pacs_viewer_url' => ['nullable', 'string', 'max:255', function ($attribute, $value, $fail) {
                 // {uid} is a placeholder for the study id, so check the address with a sample id in it.
-                if (! filter_var(str_replace('{uid}', '1.2.840.0', $value), FILTER_VALIDATE_URL)) {
+                // http(s) only: a javascript: address would run script when staff click "View images".
+                if (! filter_var(str_replace('{uid}', '1.2.840.0', $value), FILTER_VALIDATE_URL) || ! preg_match('#^https?://#i', $value)) {
                     $fail('The PACS viewer URL must be a web address (use {uid} where the study ID goes).');
                 }
             }],
             'settings.prescription_header' => 'nullable|string|max:255',
             'logo' => 'nullable|image|max:2048',
-        ])['form'];
+        ]);
+        $data = $valid['form'];
 
         $h = hospital();
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
         if ($this->logo) {
             $data['logo_path'] = $this->logo->store($h->storagePath('branding'), 'local');
         }
-        $data['settings'] = array_merge($h->settings ?? [], $this->settings);
+        // Only the validated keys: the browser could otherwise set others (e.g. the queue display key).
+        $data['settings'] = array_merge($h->settings ?? [], $valid['settings'] ?? []);
         $h->update($data);
         $this->logo = null;
         $this->toast('Hospital profile saved.');

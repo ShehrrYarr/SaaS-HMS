@@ -36,6 +36,17 @@ if (! function_exists('rupees')) {
     }
 }
 
+if (! function_exists('csv_safe')) {
+    /**
+     * One CSV row with spreadsheet formulas neutralised: a name typed as "=HYPERLINK(...)" would
+     * otherwise run when the export is opened in Excel. Numbers (including negatives) are left alone.
+     */
+    function csv_safe(array $row): array
+    {
+        return array_map(fn ($v) => is_string($v) && $v !== '' && ! is_numeric($v) && in_array($v[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$v : $v, $row);
+    }
+}
+
 if (! function_exists('money')) {
     /** e.g. "Rs 1,250" — amounts are always whole rupees. */
     function money(float|int|string|null $amount): string

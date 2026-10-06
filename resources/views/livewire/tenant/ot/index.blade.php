@@ -59,7 +59,7 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
     public function save()
     {
         $this->authorize('ot.manage');
-        $this->validate([
+        $valid = $this->validate([
             'form.patient_id' => ['required', tenant_exists('patients')],
             'form.ot_room_id' => ['required', tenant_exists('ot_rooms')],
             'form.procedure_name' => 'required|string|max:200',
@@ -90,9 +90,9 @@ new #[Layout('layouts.app')] #[Title('OT Schedule')] class extends Component
             return;
         }
 
-        $surgery = DB::transaction(function () {
+        $surgery = DB::transaction(function () use ($valid) {
             $patient = Patient::with('currentAdmission')->findOrFail($this->form['patient_id']);
-            $surgery = Surgery::create(array_map(fn ($v) => $v === '' ? null : $v, $this->form) + [
+            $surgery = Surgery::create(array_map(fn ($v) => $v === '' ? null : $v, $valid['form']) + [
                 'surgery_no' => Sequence::code('surgery', 'OT'),
                 'ipd_admission_id' => $patient->currentAdmission?->id,
                 'status' => 'scheduled',

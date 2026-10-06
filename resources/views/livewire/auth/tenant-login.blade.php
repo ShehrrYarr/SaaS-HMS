@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\LoginThrottle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -21,8 +22,8 @@ new #[Layout('layouts.guest')] #[Title('Staff Sign In')] class extends Component
 
         $hospital = hospital();
         $key = 'login:'.$hospital->id.'|'.Str::lower($this->email).'|'.request()->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('email', 'Too many attempts. Try again in '.RateLimiter::availableIn($key).' seconds.');
+        if (RateLimiter::tooManyAttempts($key, 5) || LoginThrottle::blocked()) {
+            $this->addError('email', 'Too many attempts. Try again in '.max(RateLimiter::availableIn($key), LoginThrottle::retryAfter()).' seconds.');
 
             return;
         }
@@ -30,6 +31,7 @@ new #[Layout('layouts.guest')] #[Title('Staff Sign In')] class extends Component
         $credentials = ['hospital_id' => $hospital->id, 'email' => $this->email, 'password' => $this->password, 'status' => 'active'];
         if (! Auth::attempt($credentials, $this->remember)) {
             RateLimiter::hit($key, 60);
+            LoginThrottle::failed();
             $this->addError('email', 'These credentials do not match our records.');
 
             return;

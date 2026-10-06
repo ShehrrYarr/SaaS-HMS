@@ -128,7 +128,7 @@ new #[Layout('layouts.app')] #[Title('Wards & Beds')] class extends Component
                         @forelse ($w->beds as $b)
                             <span class="badge bg-{{ status_color($b->status) }}-subtle text-{{ status_color($b->status) }} p-2">
                                 {{ $b->bed_no }} @if ($b->charge_per_day)<small>({{ money($b->charge_per_day) }})</small>@endif
-                                @if ($b->status !== 'occupied')<i class="ri-close-line ms-1" role="button" x-on:click="$confirm('Delete bed {{ $b->bed_no }}?', () => $wire.deleteBed({{ $b->id }}))"></i>@endif
+                                @if ($b->status !== 'occupied')<i class="ri-close-line ms-1" role="button" x-on:click="$confirm(@js('Delete bed '.$b->bed_no.'?'), () => $wire.deleteBed({{ $b->id }}))"></i>@endif
                             </span>
                         @empty
                             <span class="text-muted">No beds yet.</span>

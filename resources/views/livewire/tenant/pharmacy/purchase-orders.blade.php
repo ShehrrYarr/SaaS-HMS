@@ -65,6 +65,9 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
 
     public function updatedLines($value, $key): void
     {
+        if (substr_count((string) $key, '.') !== 1) {
+            return; // the whole list (or a deeper key) was replaced
+        }
         [$i, $field] = explode('.', $key);
         if ($field === 'medicine_id' && $value && ! $this->lines[$i]['unit_price']) {
             $this->lines[$i]['unit_price'] = (string) Medicine::find($value)?->purchase_price;
@@ -74,7 +77,7 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
     public function save(string $status = 'draft')
     {
         $this->authorize('pharmacy.purchase');
-        $this->validate([
+        $valid = $this->validate([
             'form.supplier_id' => ['required', tenant_exists('suppliers')],
             'form.order_date' => 'required|date',
             'form.expected_date' => 'nullable|date|after_or_equal:form.order_date',
@@ -86,8 +89,9 @@ new #[Layout('layouts.app')] #[Title('Purchase Orders')] class extends Component
             'lines.*.tax_percent' => 'nullable|numeric|min:0|max:100',
         ], [], ['lines.*.medicine_id' => 'medicine']);
 
-        $po = DB::transaction(function () use ($status) {
-            $po = PurchaseOrder::create($this->form + ['po_no' => Sequence::code('po', 'PO'), 'status' => $status === 'ordered' ? 'ordered' : 'draft', 'created_by' => auth()->id()]);
+        $header = array_map(fn ($v) => $v === '' ? null : $v, $valid['form']);
+        $po = DB::transaction(function () use ($status, $header) {
+            $po = PurchaseOrder::create($header + ['po_no' => Sequence::code('po', 'PO'), 'status' => $status === 'ordered' ? 'ordered' : 'draft', 'created_by' => auth()->id()]);
             $subtotal = 0;
             $tax = 0;
             foreach ($this->lines as $l) {

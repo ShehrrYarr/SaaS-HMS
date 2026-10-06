@@ -74,9 +74,9 @@ new #[Layout('layouts.app')] #[Title('Blood Bank')] class extends Component
     public function openScreening(int $id): void
     {
         $this->authorize('bloodbank.manage');
-        $bag = BloodBag::findOrFail($id);
+        $bag = BloodBag::whereIn('status', ['quarantine', 'available'])->findOrFail($id);
         $this->screeningId = $id;
-        $this->screening = array_merge(array_fill_keys(['hiv', 'hbv', 'hcv', 'syphilis', 'malaria'], 'pending'), $bag->screening ?? []);
+        $this->screening = array_merge(array_fill_keys(BloodBag::SCREENING_TESTS, 'pending'), array_intersect_key($bag->screening ?? [], array_flip(BloodBag::SCREENING_TESTS)));
         $this->resetValidation();
         $this->showScreening = true;
     }
@@ -84,8 +84,9 @@ new #[Layout('layouts.app')] #[Title('Blood Bank')] class extends Component
     public function saveScreening(): void
     {
         $this->authorize('bloodbank.manage');
-        $this->validate(['screening.*' => 'required|in:pending,negative,reactive']);
-        $bag = BloodBag::findOrFail($this->screeningId);
+        $rules = collect(BloodBag::SCREENING_TESTS)->mapWithKeys(fn ($t) => ["screening.{$t}" => 'required|in:pending,negative,reactive'])->all();
+        $this->screening = $this->validate($rules)['screening'];
+        $bag = BloodBag::whereIn('status', ['quarantine', 'available'])->findOrFail($this->screeningId);
         $status = in_array('reactive', $this->screening, true) ? 'discarded' : (in_array('pending', $this->screening, true) ? 'quarantine' : 'available');
         $bag->update(['screening' => $this->screening, 'status' => $status]);
         $this->showScreening = false;

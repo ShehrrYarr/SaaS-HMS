@@ -56,16 +56,16 @@ new #[Layout('layouts.app')] #[Title('Blood Requests')] class extends Component
     public function save(): void
     {
         abort_unless(auth()->user()->canAny(['bloodbank.manage', 'bloodbank.view']), 403);
-        $this->validate([
+        $data = $this->validate([
             'form.patient_id' => ['required', tenant_exists('patients')],
             'form.blood_group' => 'required|in:'.implode(',', config('hms.blood_groups')),
             'form.component' => 'required|in:'.implode(',', array_keys(BloodBag::COMPONENTS)),
             'form.units' => 'required|integer|min:1|max:20',
             'form.priority' => 'required|in:routine,urgent',
             'form.notes' => 'nullable|string|max:255',
-        ], [], ['form.patient_id' => 'patient']);
-        $patient = Patient::with('currentAdmission')->findOrFail($this->form['patient_id']);
-        BloodRequest::create($this->form + ['request_no' => Sequence::code('blood-request', 'BRQ'), 'ipd_admission_id' => $patient->currentAdmission?->id, 'status' => 'pending', 'requested_by' => auth()->id()]);
+        ], [], ['form.patient_id' => 'patient'])['form'];
+        $patient = Patient::with('currentAdmission')->findOrFail($data['patient_id']);
+        BloodRequest::create($data + ['request_no' => Sequence::code('blood-request', 'BRQ'), 'ipd_admission_id' => $patient->currentAdmission?->id, 'status' => 'pending', 'requested_by' => auth()->id()]);
         if (! $patient->blood_group) {
             $patient->update(['blood_group' => $this->form['blood_group']]);
         }

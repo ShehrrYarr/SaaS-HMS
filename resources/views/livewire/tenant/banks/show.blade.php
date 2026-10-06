@@ -65,7 +65,7 @@ new #[Layout('layouts.app')] #[Title('Account Statement')] class extends Compone
             fputcsv($out, [$this->from, 'Opening balance', '', '', '', '', $balance]);
             foreach ($rows as $tx) {
                 $balance += $tx->signed_amount;
-                fputcsv($out, [$tx->transacted_at->format('Y-m-d H:i'), $tx->description, $tx->reference, label($tx->type), $tx->direction === 'in' ? $tx->amount : '', $tx->direction === 'out' ? $tx->amount : '', $balance]);
+                fputcsv($out, csv_safe([$tx->transacted_at->format('Y-m-d H:i'), $tx->description, $tx->reference, label($tx->type), $tx->direction === 'in' ? $tx->amount : '', $tx->direction === 'out' ? $tx->amount : '', $balance]));
             }
             fclose($out);
         }, $name, ['Content-Type' => 'text/csv']);

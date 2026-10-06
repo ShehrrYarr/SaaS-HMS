@@ -59,14 +59,14 @@ new #[Layout('layouts.app')] #[Title('Admission')] class extends Component
     public function addCharge(IpdService $ipd): void
     {
         $this->authorize('ipd.charges');
-        $this->validate([
+        $valid = $this->validate([
             'charge.category' => 'required|in:nursing,doctor_visit,procedure,consumable,medicine,other',
             'charge.description' => 'required|string|max:200',
             'charge.quantity' => 'required|numeric|min:0.01',
             'charge.unit_price' => 'required|integer|min:0',
             'charge.doctor_id' => ['nullable', tenant_exists('staff')],
         ]);
-        $ipd->addCharge($this->admission, array_merge($this->charge, ['doctor_id' => $this->charge['doctor_id'] ?: null]));
+        $ipd->addCharge($this->admission, array_merge($valid['charge'], ['doctor_id' => $valid['charge']['doctor_id'] ?? null ?: null]));
         $this->charge = ['service' => '', 'category' => 'procedure', 'description' => '', 'quantity' => 1, 'unit_price' => '', 'doctor_id' => ''];
         $this->toast('Charge added.');
     }

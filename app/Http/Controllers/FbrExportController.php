@@ -39,21 +39,21 @@ class FbrExportController extends Controller
                 'Department', 'Doctor', 'Diagnosis', 'Lab tests', 'Imaging', 'Medicines', 'Surgery']);
             $register->each($from, $to, function (array $r) use ($out) {
                 $s = $r['services'];
-                fputcsv($out, [
+                fputcsv($out, csv_safe([
                     $r['at']->format('Y-m-d'), $r['at']->format('H:i'), $r['type_label'], $r['ref'],
                     $r['patient']['name'], $r['patient']['uhid'], $r['patient']['cnic'], $r['patient']['age_gender'], $this->textPhone($r['patient']['phone']), $r['patient']['address'],
                     $r['department'], $r['doctor'], $r['diagnosis'],
                     implode(', ', $s['Lab tests'] ?? []), implode(', ', $s['Imaging'] ?? []), implode(', ', $s['Medicines'] ?? []), implode(', ', $s['Surgery'] ?? []),
-                ]);
+                ]));
             });
             fclose($out);
         }, $name.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    /** "+92 300 1234567": spaced, so Excel keeps it as text instead of showing 9.23E+11. */
+    /** "0300 1234567": local format with a space, so Excel keeps it as text (not 9.23E+11 or a formula). */
     protected function textPhone(?string $phone): ?string
     {
-        return $phone && preg_match('/^\+92(\d{3})(\d+)$/', $phone, $m) ? "+92 {$m[1]} {$m[2]}" : $phone;
+        return $phone && preg_match('/^\+92(\d{3})(\d+)$/', $phone, $m) ? "0{$m[1]} {$m[2]}" : $phone;
     }
 
     protected function audit(string $format, string $from, string $to, int $rows): void

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\LoginThrottle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -20,14 +21,15 @@ new #[Layout('layouts.guest')] #[Title('Super Admin Sign In')] class extends Com
         $this->validate(['email' => 'required|email', 'password' => 'required|string']);
 
         $key = 'admin-login:'.Str::lower($this->email).'|'.request()->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('email', 'Too many attempts. Try again in '.RateLimiter::availableIn($key).' seconds.');
+        if (RateLimiter::tooManyAttempts($key, 5) || LoginThrottle::blocked()) {
+            $this->addError('email', 'Too many attempts. Try again in '.max(RateLimiter::availableIn($key), LoginThrottle::retryAfter()).' seconds.');
 
             return;
         }
 
         if (! Auth::attempt(['email' => $this->email, 'password' => $this->password, 'is_super_admin' => true, 'status' => 'active'], $this->remember)) {
             RateLimiter::hit($key, 60);
+            LoginThrottle::failed();
             $this->addError('email', 'These credentials do not match a platform administrator.');
 
             return;

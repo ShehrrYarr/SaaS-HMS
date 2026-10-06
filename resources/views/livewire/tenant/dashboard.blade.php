@@ -34,7 +34,7 @@ new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component
         if ($h->hasModule('appointments') && $user->can('appointments.view')) {
             $q = Appointment::whereDate('appointment_date', $today)->when($doctor, fn ($q) => $q->where('doctor_id', $doctor->id));
             $cards[] = ['title' => $doctor ? 'My Appointments Today' : 'Appointments Today', 'value' => (clone $q)->whereNotIn('status', ['cancelled'])->count(), 'icon' => 'ri-calendar-check-line', 'color' => 'info',
-                'hint' => (clone $q)->where('status', 'checked_in')->count().' checked in &middot; '.(clone $q)->where('status', 'completed')->count().' completed', 'href' => route('tenant.appointments.index')];
+                'hint' => (clone $q)->where('status', 'checked_in')->count().' checked in · '.(clone $q)->where('status', 'completed')->count().' completed', 'href' => route('tenant.appointments.index')];
         }
         if ($h->hasModule('opd') && $user->can('opd.view')) {
             $q = OpdVisit::whereDate('visit_date', $today)->when($doctor, fn ($q) => $q->where('doctor_id', $doctor->id));
@@ -51,7 +51,7 @@ new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component
             $total = Bed::count();
             $occupied = Bed::where('status', 'occupied')->count();
             $cards[] = ['title' => 'Bed Occupancy', 'value' => $occupied.' / '.$total, 'icon' => 'ri-hotel-bed-line', 'color' => 'warning',
-                'hint' => ($total ? round($occupied / $total * 100) : 0).'% occupied &middot; '.IpdAdmission::whereDate('admitted_at', $today)->count().' admitted today', 'href' => route('tenant.ipd.beds')];
+                'hint' => ($total ? round($occupied / $total * 100) : 0).'% occupied · '.IpdAdmission::whereDate('admitted_at', $today)->count().' admitted today', 'href' => route('tenant.ipd.beds')];
         }
         if ($h->hasModule('billing') && $user->can('billing.reports')) {
             $collected = Payment::whereDate('paid_at', $today)->where('is_refund', false)->sum('amount') - Payment::whereDate('paid_at', $today)->where('is_refund', true)->sum('amount');

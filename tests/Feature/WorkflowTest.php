@@ -155,10 +155,11 @@ class WorkflowTest extends TestCase
         $diag = app(DiagnosticsService::class);
         $order = $diag->orderLab(Patient::firstOrFail(), [LabTest::where('code', 'FBS')->value('id')]);
         $item = $diag->collectSample($order->items()->first())->fresh();
-        $device = \App\Models\LabDevice::firstOrFail();
+        \App\Models\LabDevice::firstOrFail()->update(['api_token' => 'known-device-token']);
+        $this->assertNotSame('known-device-token', \App\Models\LabDevice::firstOrFail()->getRawOriginal('api_token')); // stored hashed
         tenancy()->forget();
 
-        $this->postJson('/api/lab-devices/results', ['barcode' => $item->sample_barcode, 'results' => ['GLU' => 95]], ['Authorization' => 'Bearer '.$device->api_token])
+        $this->postJson('/api/lab-devices/results', ['barcode' => $item->sample_barcode, 'results' => ['GLU' => 95]], ['Authorization' => 'Bearer known-device-token'])
             ->assertOk()->assertJsonPath('flags.GLU', 'normal');
         $this->postJson('/api/lab-devices/results', ['barcode' => 'X', 'results' => ['GLU' => 1]], ['Authorization' => 'Bearer nope'])->assertUnauthorized();
     }

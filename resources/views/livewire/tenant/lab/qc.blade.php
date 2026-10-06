@@ -33,7 +33,7 @@ new #[Layout('layouts.app')] #[Title('Quality Control')] class extends Component
     public function save(): void
     {
         $this->authorize('lab.qc');
-        $this->validate([
+        $valid = $this->validate([
             'form.lab_test_id' => ['nullable', tenant_exists('lab_tests')],
             'form.lab_device_id' => ['nullable', tenant_exists('lab_devices')],
             'form.parameter' => 'required|string|max:100',
@@ -51,7 +51,7 @@ new #[Layout('layouts.app')] #[Title('Quality Control')] class extends Component
         $tol = (float) $this->form['tolerance'];
         $result = $this->form['result'] ?: ($deviation <= $tol ? 'pass' : ($deviation <= 2 * $tol ? 'warning' : 'fail'));
 
-        LabQcLog::create(collect($this->form)->except(['tolerance', 'result'])->map(fn ($v) => $v === '' ? null : $v)->all() + [
+        LabQcLog::create(collect($valid['form'])->except(['tolerance', 'result'])->map(fn ($v) => $v === '' ? null : $v)->all() + [
             'result' => $result, 'logged_by' => auth()->id(), 'logged_at' => now(),
         ]);
         $this->chartParam = $this->form['parameter'];

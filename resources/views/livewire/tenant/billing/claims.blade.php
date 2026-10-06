@@ -60,7 +60,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
     public function save(BillingService $billing): void
     {
         $this->authorize('insurance.manage');
-        $this->validate([
+        $valid = $this->validate([
             'form.status' => 'required|in:draft,submitted,under_review,approved,partially_approved,rejected,settled',
             'form.policy_no' => 'nullable|string|max:100',
             'form.claim_amount' => 'required|integer|min:0',
@@ -74,7 +74,7 @@ new #[Layout('layouts.app')] #[Title('Insurance Claims')] class extends Componen
         ], [], ['form.settle_account' => 'settlement account']);
         $c = InsuranceClaim::with('invoice')->findOrFail($this->claim);
         $before = $c->settled_amount;
-        $data = array_map(fn ($v) => $v === '' ? null : $v, \Illuminate\Support\Arr::except($this->form, 'settle_account'));
+        $data = array_map(fn ($v) => $v === '' ? null : $v, \Illuminate\Support\Arr::except($valid['form'], 'settle_account'));
         if ($data['status'] === 'submitted' && ! $data['submitted_at']) {
             $data['submitted_at'] = today()->toDateString();
         }

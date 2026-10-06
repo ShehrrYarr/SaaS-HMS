@@ -71,6 +71,12 @@ new #[Layout('layouts.app')] #[Title('Roles & Permissions')] class extends Compo
 
             return;
         }
+        // Someone who manages roles (but is not an admin) must not raise the permissions of their own role.
+        if (! auth()->user()->isHospitalAdmin() && auth()->user()->hasRole($role->name)) {
+            $this->toast('You cannot change the permissions of your own role. Ask a Hospital Admin.', 'error');
+
+            return;
+        }
         $available = hospital()->availablePermissions();
         $grant = array_values(array_intersect($this->selected, $available));
         $before = $role->permissions->pluck('name')->sort()->values()->all();

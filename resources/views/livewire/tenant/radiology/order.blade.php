@@ -65,7 +65,8 @@ new #[Layout('layouts.app')] #[Title('Imaging Study')] class extends Component
     public function uploadFiles(): void
     {
         $this->authorize('radiology.perform');
-        $this->validate(['files' => 'required|array|min:1', 'files.*' => 'file|max:102400']);
+        $this->validate(['files' => 'required|array|min:1', 'files.*' => 'file|max:102400|extensions:dcm,jpg,jpeg,png,webp,gif,bmp,tif,tiff,pdf'],
+            ['files.*.extensions' => 'Upload DICOM (.dcm), image or PDF files only.']);
         $total = 0;
         foreach ($this->files as $file) {
             $ext = strtolower($file->getClientOriginalExtension());

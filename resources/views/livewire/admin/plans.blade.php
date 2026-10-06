@@ -118,7 +118,7 @@ new #[Layout('layouts.admin')] #[Title('Subscription Plans')] class extends Comp
                         <span class="text-muted fs-12">{{ $plan->hospitals_count }} hospitals</span>
                         <div>
                             <button class="btn btn-sm btn-light-primary" wire:click="edit({{ $plan->id }})">Edit</button>
-                            <button class="btn btn-sm btn-light-danger" x-on:click="$confirm('Delete plan {{ $plan->name }}?', () => $wire.delete({{ $plan->id }}))">Delete</button>
+                            <button class="btn btn-sm btn-light-danger" x-on:click="$confirm(@js('Delete plan '.$plan->name.'?'), () => $wire.delete({{ $plan->id }}))">Delete</button>
                         </div>
                     </div>
                 </div>

@@ -22,6 +22,17 @@ class LabDevice extends Model
         ];
     }
 
+    /** Tokens are stored as SHA-256 hashes: the plain token is shown once and a database copy is useless. */
+    protected function apiToken(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(set: fn ($value) => static::hashToken($value));
+    }
+
+    public static function hashToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
     public function qcLogs(): HasMany
     {
         return $this->hasMany(LabQcLog::class);

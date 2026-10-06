@@ -5,6 +5,7 @@ use App\Models\AuditLog;
 use App\Models\BankAccount;
 use App\Models\User;
 use App\Notifications\HmsNotification;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -36,6 +37,12 @@ new #[Layout('layouts.portal')] #[Title('Bills & Payments')] class extends Compo
             'payingId' => 'required', 'reference' => 'required|string|max:100', 'amount' => 'required|integer|min:1', 'proof' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png',
             'bank' => ['required', tenant_exists('bank_accounts')->where('show_to_patients', true)->where('is_active', true)],
         ], [], ['bank' => 'bank']);
+        // Each report notifies the billing desk, so cap it at 5 an hour per patient.
+        if (! RateLimiter::attempt('portal-pay-report:'.auth()->id(), 5, fn () => true, 3600)) {
+            $this->addError('reference', 'You have reported several payments recently. The billing desk will contact you.');
+
+            return;
+        }
         $bank = BankAccount::findOrFail($this->bank);
         $patient = auth()->user()->patient;
         $invoice = $patient->invoices()->whereIn('status', ['unpaid', 'partial'])->findOrFail($this->payingId);

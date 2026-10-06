@@ -36,5 +36,8 @@ class BloodBag extends Model
     public const COMPONENTS = ['whole_blood' => 'Whole Blood', 'prbc' => 'Packed RBC', 'ffp' => 'Fresh Frozen Plasma', 'platelets' => 'Platelets', 'cryo' => 'Cryoprecipitate'];
 
     /** Shelf life in days per component. */
+    /** Transfusion-transmissible infection tests; a unit is released only when every one is negative. */
+    public const SCREENING_TESTS = ['hiv', 'hbv', 'hcv', 'syphilis', 'malaria'];
+
     public const SHELF_LIFE = ['whole_blood' => 35, 'prbc' => 42, 'ffp' => 365, 'platelets' => 5, 'cryo' => 365];
 }

@@ -69,6 +69,13 @@ new #[Layout('layouts.app')] #[Title('Users')] class extends Component
         if ($user->exists && $user->isDemoAccount() && $this->demoLocked('Editing the shared demo accounts')) {
             return;
         }
+        // Only a Hospital Admin may grant the admin role or edit an admin's account (password, email, roles);
+        // otherwise anyone with "Manage user accounts" could promote themselves or take over an admin.
+        if (! auth()->user()->isHospitalAdmin() && (in_array('Hospital Admin', $this->form['roles'], true) || ($user->exists && $user->hasRole('Hospital Admin')))) {
+            $this->addError('form.roles', 'Only a Hospital Admin can grant the Hospital Admin role or edit an admin account.');
+
+            return;
+        }
         if ($user->id === auth()->id() && (! in_array('Hospital Admin', $this->form['roles']) && $user->hasRole('Hospital Admin') || $this->form['status'] !== 'active')) {
             $this->addError('form.roles', 'You cannot remove your own admin access or deactivate yourself.');
 

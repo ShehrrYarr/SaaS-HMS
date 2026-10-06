@@ -108,7 +108,7 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
             'form.address' => 'nullable|string|max:255',
             'form.status' => 'required|in:active,inactive',
             'photo' => 'nullable|image|max:2048',
-            'loginRole' => [Rule::requiredIf($this->createLogin), 'nullable', Rule::exists('roles', 'name')->where('hospital_id', hospital()->id)],
+            'loginRole' => [Rule::requiredIf($this->createLogin), 'nullable', Rule::exists('roles', 'name')->where('hospital_id', hospital()->id), Rule::notIn($this->blockedLoginRoles())],
             'loginPassword' => [Rule::requiredIf($this->createLogin), 'nullable', 'min:8'],
         ])['form'];
         $data = array_map(fn ($v) => $v === '' ? null : $v, $data);
@@ -138,6 +138,12 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
         $this->toast('Staff record saved.');
     }
 
+    /** Staff logins never get the portal/FBR roles, and only a Hospital Admin can create another admin. */
+    protected function blockedLoginRoles(): array
+    {
+        return array_merge(['Patient', 'FBR Officer'], auth()->user()->isHospitalAdmin() ? [] : ['Hospital Admin']);
+    }
+
     public function with(): array
     {
         $query = Staff::with(['department', 'user'])
@@ -150,7 +156,7 @@ new #[Layout('layouts.app')] #[Title('Staff Directory')] class extends Component
             'staff' => $this->applySort($query)->paginate($this->perPage),
             'departments' => Department::orderBy('name')->pluck('name', 'id'),
             'types' => Staff::TYPES,
-            'roles' => Role::where('hospital_id', hospital()->id)->where('name', '!=', 'Patient')->orderBy('name')->pluck('name', 'name'),
+            'roles' => Role::where('hospital_id', hospital()->id)->whereNotIn('name', $this->blockedLoginRoles())->orderBy('name')->pluck('name', 'name'),
             'counts' => Staff::where('status', 'active')->selectRaw('staff_type, count(*) c')->groupBy('staff_type')->pluck('c', 'staff_type'),
         ];
     }

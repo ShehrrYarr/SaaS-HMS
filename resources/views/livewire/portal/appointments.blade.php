@@ -4,6 +4,7 @@ use App\Livewire\Concerns\Toasts;
 use App\Models\Appointment;
 use App\Models\Staff;
 use App\Services\AppointmentService;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
@@ -54,6 +55,12 @@ new #[Layout('layouts.portal')] #[Title('My Appointments')] class extends Compon
             return;
         }
 
+        // A patient account cannot fill a doctor's diary: at most 5 portal bookings an hour.
+        if (! RateLimiter::attempt('portal-book:'.auth()->id(), 5, fn () => true, 3600)) {
+            $this->addError('slot', 'You have made several bookings recently. Please call the hospital to book more.');
+
+            return;
+        }
         $patient = auth()->user()->patient;
         $doctor = Staff::doctors()->active()->findOrFail($this->doctor_id);
         $appointment = $service->book($patient, $doctor, [

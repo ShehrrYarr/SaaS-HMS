@@ -9,7 +9,8 @@
         </div>
         <h4 class="fw-semibold fs-5 mb-0">{{ $value }}</h4>
         @if ($hint)
-            <p class="text-muted fs-12 mb-0 mt-2">{!! $hint !!}</p>
+            {{-- Escaped: hints can carry typed names (e.g. an insurance company). Pass an HtmlString for markup. --}}
+            <p class="text-muted fs-12 mb-0 mt-2">{{ $hint }}</p>
         @endif
         @if ($href)
             <a href="{{ $href }}" wire:navigate class="stretched-link"></a>

@@ -79,15 +79,15 @@ new #[Layout('layouts.app')] #[Title('Invoice')] class extends Component
     public function saveItem(BillingService $billing): void
     {
         $this->authorize('billing.create');
-        $this->validate([
-            'item.service_type' => 'required|string',
+        $valid = $this->validate([
+            'item.service_type' => 'required|in:opd,ipd,pharmacy,lab,radiology,ot,bloodbank,service,other',
             'item.description' => 'required|string|max:255',
             'item.quantity' => 'required|numeric|min:0.01',
             'item.unit_price' => 'required|integer|min:0',
             'item.discount' => 'nullable|integer|min:0',
             'item.tax_percent' => 'nullable|numeric|min:0|max:100',
         ]);
-        $billing->addItem($this->invoice, $this->item);
+        $billing->addItem($this->invoice, $valid['item']);
         $this->invoice->refresh();
         $this->showItem = false;
         $this->toast('Item added.');

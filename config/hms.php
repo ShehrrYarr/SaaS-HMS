@@ -39,6 +39,15 @@ return [
     | Demo accounts cannot change their email/password/status/roles, and the
     | hospital is wiped & re-seeded on a schedule (php artisan hms:reset-demo).
     */
+    /*
+    | Landing page "chat on WhatsApp" button (top right). Number in international
+    | format without "+" (wa.me links need it); empty hides the button.
+    */
+    'whatsapp' => [
+        'number' => env('HMS_WHATSAPP_NUMBER', '923120883979'),
+        'message' => 'Hi, can I know more about this hospital management system?',
+    ],
+
     'demo' => [
         'enabled' => env('HMS_DEMO_ENABLED', true),
         'hospital' => env('HMS_DEMO_HOSPITAL', 'city-hospital'),

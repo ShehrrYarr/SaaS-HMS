@@ -49,11 +49,8 @@ new #[Layout('layouts.landing')] class extends Component
             ]) : null,
             'accounts' => config('hms.demo.accounts'),
             'resetHours' => config('hms.demo.reset_every_hours'),
-            'whatsapp' => ($wa = preg_replace('/\D/', '', (string) config('hms.whatsapp.number'))) ? [
-                'url' => 'https://wa.me/'.$wa.'?text='.rawurlencode(config('hms.whatsapp.message')),
-                // 923120883979 -> "0312 0883979" (how Pakistani numbers are written locally)
-                'label' => str_starts_with($wa, '92') ? '0'.substr($wa, 2, 3).' '.substr($wa, 5) : '+'.$wa,
-            ] : null,
+            'whatsapp' => ($wa = preg_replace('/\D/', '', (string) config('hms.whatsapp.number')))
+                ? 'https://wa.me/'.$wa.'?text='.rawurlencode(config('hms.whatsapp.message')) : null,
             'plans' => Plan::where('is_active', true)->orderBy('sort_order')->get(),
             'moduleLabels' => collect(config('hms.modules'))->map(fn ($m) => $m['label']),
             'modules' => [
@@ -81,12 +78,6 @@ new #[Layout('layouts.landing')] class extends Component
             <a class="navbar-brand d-flex align-items-center gap-2 lp-brand" href="{{ route('home') }}">
                 <img src="{{ asset('assets/images/hms-mark.png') }}" height="32" alt=""> {{ $platform }}
             </a>
-            @if ($whatsapp)
-                {{-- Always visible (outside the collapsed menu); last on wide screens = top right. --}}
-                <a href="{{ $whatsapp['url'] }}" target="_blank" rel="noopener" class="lp-wa ms-auto me-2 me-lg-0 ms-lg-3 order-lg-last" aria-label="Chat with us on WhatsApp: {{ $whatsapp['label'] }}">
-                    <i class="ri-whatsapp-line"></i><span>{{ $whatsapp['label'] }}</span>
-                </a>
-            @endif
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#lpNav" aria-label="Menu"><i class="ri-menu-line fs-4"></i></button>
             <div class="collapse navbar-collapse" id="lpNav">
                 <ul class="navbar-nav mx-auto gap-lg-2">
@@ -100,8 +91,7 @@ new #[Layout('layouts.landing')] class extends Component
                     @auth
                         <a href="{{ auth()->user()->homeUrl() }}" class="btn btn-primary"><i class="ri-dashboard-3-line me-1"></i>My dashboard</a>
                     @else
-                        {{-- Hidden on mid-size screens to make room for the WhatsApp button; the "Sign in" link goes to the same place. --}}
-                        <a href="#signin" class="btn btn-light d-lg-none d-xxl-inline-block">Hospital sign in</a>
+                        <a href="#signin" class="btn btn-light">Hospital sign in</a>
                         @if ($demo)
                             <form method="POST" action="{{ route('demo.login', 'admin') }}">@csrf<button class="btn btn-primary"><i class="ri-play-circle-line me-1"></i>Try Demo</button></form>
                         @endif
@@ -397,4 +387,9 @@ new #[Layout('layouts.landing')] class extends Component
             <p class="fs-12 mb-0">&copy; {{ date('Y') }} {{ $platform }}. All rights reserved.</p>
         </div>
     </footer>
+
+    @if ($whatsapp)
+        {{-- Floating "chat on WhatsApp" button, bottom right on every screen size. --}}
+        <a href="{{ $whatsapp }}" target="_blank" rel="noopener" class="lp-wa" aria-label="Chat with us on WhatsApp" title="Chat with us on WhatsApp"><i class="ri-whatsapp-line"></i></a>
+    @endif
 </div>

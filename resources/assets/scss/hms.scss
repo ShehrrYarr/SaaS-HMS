@@ -139,15 +139,14 @@
 body.lp{background:#fff;color:#1f2937}
 .lp section{scroll-margin-top:72px}
 .lp-nav{backdrop-filter:saturate(180%) blur(10px);background:rgba(255,255,255,.88);border-bottom:1px solid rgba(15,23,42,.06)}
-.lp-nav .nav-link{color:#475569;font-weight:500;white-space:nowrap}
-.lp-nav .btn{white-space:nowrap}
+.lp-nav .nav-link{color:#475569;font-weight:500}
 .lp-nav .nav-link:hover{color:var(--bs-primary)}
-/* Landing: WhatsApp button (top right) with a short buzz every few seconds */
-.lp-wa{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:50rem;background:#25d366;color:#fff;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(37,211,102,.4);animation:lp-wa-buzz 2.5s ease-in-out infinite}
+/* Landing: floating WhatsApp button (bottom right) with a short buzz every few seconds */
+.lp-wa{position:fixed;right:24px;bottom:24px;z-index:1040;display:flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:50%;background:#25d366;color:#fff;box-shadow:0 6px 18px rgba(37,211,102,.45);animation:lp-wa-buzz 2.5s ease-in-out infinite}
 .lp-wa:hover,.lp-wa:focus-visible{background:#1ebe5b;color:#fff;animation-play-state:paused}
-.lp-wa i{font-size:1.25rem;line-height:1}
-@keyframes lp-wa-buzz{0%,32%,100%{transform:none}4%,12%,20%{transform:translateX(-2px) rotate(-4deg)}8%,16%,24%{transform:translateX(2px) rotate(4deg)}28%{transform:translateX(-1px) rotate(-2deg)}}
-@media (max-width:575.98px){.lp-wa{padding:.35rem .75rem;font-size:.8125rem}.lp-wa i{font-size:1.1rem}}
+.lp-wa i{font-size:2rem;line-height:1}
+@keyframes lp-wa-buzz{0%,32%,100%{transform:none}4%,12%,20%{transform:translateX(-2px) rotate(-8deg)}8%,16%,24%{transform:translateX(2px) rotate(8deg)}28%{transform:translateX(-1px) rotate(-4deg)}}
+@media (max-width:575.98px){.lp-wa{right:16px;bottom:16px;width:54px;height:54px}.lp-wa i{font-size:1.75rem}}
 @media (prefers-reduced-motion:reduce){.lp-wa{animation:none}}
 .lp-brand{font-weight:700;font-size:1.15rem;color:#0f172a;letter-spacing:-.01em}
 .lp-hero{position:relative;overflow:hidden;background:radial-gradient(1200px 500px at 85% -10%,rgba(13,110,253,.16),transparent 60%),radial-gradient(800px 400px at -10% 110%,rgba(25,135,84,.12),transparent 60%),#f8fafc;padding:120px 0 80px}

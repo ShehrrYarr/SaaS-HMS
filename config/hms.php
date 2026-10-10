@@ -40,7 +40,7 @@ return [
     | hospital is wiped & re-seeded on a schedule (php artisan hms:reset-demo).
     */
     /*
-    | Landing page "chat on WhatsApp" button (top right). Number in international
+    | Landing page floating "chat on WhatsApp" button. Number in international
     | format without "+" (wa.me links need it); empty hides the button.
     */
     'whatsapp' => [
